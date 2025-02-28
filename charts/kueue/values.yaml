@@ -7,8 +7,6 @@ fullnameOverride: ""
 enablePrometheus: false
 # Enable x509 automated certificate management using cert-manager (cert-manager.io)
 enableCertManager: false
-# Enable x509 automated certificate management using cert-manager with the metrics endpoint
-enableCertManagerMetrics: false
 # Enable API Priority and Fairness configuration for the visibility API
 enableVisibilityAPF: false
 # Customize controllerManager
@@ -38,8 +36,6 @@ controllerManager:
       capabilities:
         drop:
           - ALL
-    additionalVolumeMounts: []
-    volumeMounts: []
   replicas: 1
   imagePullSecrets: []
   readinessProbe:
@@ -154,10 +150,6 @@ webhookService:
       protocol: TCP
       targetPort: 9443
   type: ClusterIP
+
 # kueue-viz dashboard
 enableKueueViz: false
-
-# tls configs for serviceMonitor
-serviceMonitor:
-  tlsConfig:
-    insecureSkipVerify: true
