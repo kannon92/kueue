@@ -141,6 +141,10 @@ type ClusterQueueSpec struct {
 	// admissionScope indicates whether ClusterQueue uses the Admission Fair Sharing
 	// +optional
 	AdmissionScope *AdmissionScope `json:"admissionScope,omitempty"`
+
+	// Budget defines the budget for the ClusterQueue.
+	// +optional
+	Budget *Budget `json:"budget,omitempty"`
 }
 
 // AdmissionChecksStrategy defines a strategy for a AdmissionCheck.
@@ -316,6 +320,10 @@ type ClusterQueueStatus struct {
 	// This is recorded only when Fair Sharing is enabled in the Kueue configuration.
 	// +optional
 	FairSharing *FairSharingStatus `json:"fairSharing,omitempty"`
+
+	// budgetFlavorUsage contains the current budget usage for this ClusterQueue.
+	// +optional
+	BudgetFlavorUsage *BudgetFlavorUsage `json:"budgetFlavorUsage,omitempty"`
 }
 
 type ClusterQueuePendingWorkloadsStatus struct {
@@ -360,6 +368,26 @@ type ResourceUsage struct {
 	// Borrowed is quantity of quota that is borrowed from the cohort. In other
 	// words, it's the used quota that is over the nominalQuota.
 	Borrowed resource.Quantity `json:"borrowed,omitempty"`
+}
+
+type BudgetFlavorUsage struct {
+	// name of the flavor.
+	Name ResourceFlavorReference `json:"name"`
+
+	// budgetUsage lists the budget usage for the resources in this flavor.
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=16
+	Resources []BudgetUsage `json:"budgetUsage"`
+}
+
+type BudgetUsage struct {
+	// budgetTotal is the total budget allocated for this ClusterQueue.
+	BudgetTotal resource.Quantity `json:"budgetTotal,omitempty"`
+
+	// budgetHours is the number of hours that this budget applies to.
+	// +kubebuilder:validation:Minimum=1
+	BudgetHours int32 `json:"budgetHours"`
 }
 
 const (
@@ -503,6 +531,45 @@ type BorrowWithinCohort struct {
 	//
 	// +optional
 	MaxPriorityThreshold *int32 `json:"maxPriorityThreshold,omitempty"`
+}
+
+type Budget struct {
+	// BudgetGroup describes a group of resources that this budget applies to.
+	// flavors is the list of flavors that provide the resources of this group.
+	// Typically, different flavors represent different hardware models
+	// (e.g., gpu models, cpu architectures) or pricing models (on-demand vs spot
+	// cpus).
+	// Each flavor MUST list all the resources listed for this group in the same
+	// order as the .resources field.
+	// The list cannot be empty and it can contain up to 16 flavors.
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	Flavors []BudgetQuotas `json:"flavors"`
+}
+
+type BudgetQuotas struct {
+	// name of this flavor. The name should match the .metadata.name of a
+	// ResourceFlavor. If a matching ResourceFlavor does not exist, the
+	// ClusterQueue will have an Active condition set to False.
+	Name ResourceFlavorReference `json:"name"`
+
+	// resources is the list of quotas for this flavor per resource.
+	// There could be up to 16 resources.
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	BudgetQuota []BudgetQuota `json:"budgetQuota,omitempty"`
+}
+
+type BudgetQuota struct {
+	// name of this resource.
+	Name corev1.ResourceName `json:"name"`
+	// budgetHours is the number of hours that this budget applies to.
+	// +kubebuilder:validation:Minimum=1
+	BudgetHours int32 `json:"budgetHours"`
 }
 
 // +genclient
