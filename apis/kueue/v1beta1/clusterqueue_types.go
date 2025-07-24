@@ -142,9 +142,9 @@ type ClusterQueueSpec struct {
 	// +optional
 	AdmissionScope *AdmissionScope `json:"admissionScope,omitempty"`
 
-	// Budget defines the budget for the ClusterQueue.
+	// budgetPolicy defines the budgetPolicy for the ClusterQueue.
 	// +optional
-	Budget *Budget `json:"budget,omitempty"`
+	BudgetPolicy *BudgetPolicy `json:"budgetPolicy,omitempty"`
 }
 
 // AdmissionChecksStrategy defines a strategy for a AdmissionCheck.
@@ -323,7 +323,11 @@ type ClusterQueueStatus struct {
 
 	// budgetFlavorUsage contains the current budget usage for this ClusterQueue.
 	// +optional
-	BudgetFlavorUsage *BudgetFlavorUsage `json:"budgetFlavorUsage,omitempty"`
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	BudgetFlavorUsage []BudgetFlavorUsage `json:"budgetFlavorUsage,omitempty"`
 }
 
 type ClusterQueuePendingWorkloadsStatus struct {
@@ -378,13 +382,15 @@ type BudgetFlavorUsage struct {
 	// +listType=map
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=16
-	Resources []BudgetUsage `json:"budgetUsage"`
+	BudgetUsage []BudgetUsage `json:"budgetUsage"`
 }
 
 type BudgetUsage struct {
-	// budgetTotal is the total budget allocated for this ClusterQueue.
-	BudgetTotal resource.Quantity `json:"budgetTotal,omitempty"`
-
+	// name of the resource
+	Name corev1.ResourceName `json:"name"`
+	// budgetTotal is the total number of hours allocated for this ClusterQueue.
+	// +kubebuilder:validation:Minimum=1
+	BudgetTotal int32 `json:"budgetTotal,omitempty"`
 	// budgetHours is the number of hours that this budget applies to.
 	// +kubebuilder:validation:Minimum=1
 	BudgetHours int32 `json:"budgetHours"`
@@ -533,7 +539,7 @@ type BorrowWithinCohort struct {
 	MaxPriorityThreshold *int32 `json:"maxPriorityThreshold,omitempty"`
 }
 
-type Budget struct {
+type BudgetPolicy struct {
 	// BudgetGroup describes a group of resources that this budget applies to.
 	// flavors is the list of flavors that provide the resources of this group.
 	// Typically, different flavors represent different hardware models
@@ -546,7 +552,13 @@ type Budget struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=16
-	Flavors []BudgetQuotas `json:"flavors"`
+	BudgetGroup []BudgetQuotas `json:"budgetGroup"`
+
+	// actionWhenBudgetExhausted defines the action to take when the budget is exhausted.
+	// The possible values are:
+	// +kubebuilder:validation:Enum=Hold;HoldAndDrain
+	// +kubebuilder:default="Hold"
+	ActionWhenBudgetExhausted StopPolicy `json:"actionWhenBudgetExhausted,omitempty"`
 }
 
 type BudgetQuotas struct {
@@ -565,11 +577,11 @@ type BudgetQuotas struct {
 }
 
 type BudgetQuota struct {
-	// name of this resource.
-	Name corev1.ResourceName `json:"name"`
 	// budgetHours is the number of hours that this budget applies to.
 	// +kubebuilder:validation:Minimum=1
 	BudgetHours int32 `json:"budgetHours"`
+	// name of this resource.
+	Name corev1.ResourceName `json:"name"`
 }
 
 // +genclient

@@ -64,6 +64,7 @@ type options struct {
 	podsReadyTracking    bool
 	fairSharingEnabled   bool
 	admissionFairSharing *config.AdmissionFairSharing
+	budgetPolicy         bool
 }
 
 // Option configures the reconciler.
@@ -103,6 +104,12 @@ func WithAdmissionFairSharing(afs *config.AdmissionFairSharing) Option {
 	}
 }
 
+func WithBudgetPolicy(enabled bool) Option {
+	return func(o *options) {
+		o.budgetPolicy = enabled
+	}
+}
+
 var defaultOptions = options{}
 
 // Cache keeps track of the Workloads that got admitted through ClusterQueues.
@@ -117,6 +124,7 @@ type Cache struct {
 	admissionChecks      map[kueue.AdmissionCheckReference]AdmissionCheck
 	workloadInfoOptions  []workload.InfoOption
 	fairSharingEnabled   bool
+	budgetPolicy         bool
 	admissionFairSharing *config.AdmissionFairSharing
 
 	hm hierarchy.Manager[*clusterQueue, *cohort]
@@ -138,6 +146,7 @@ func New(client client.Client, opts ...Option) *Cache {
 		workloadInfoOptions:  options.workloadInfoOptions,
 		fairSharingEnabled:   options.fairSharingEnabled,
 		admissionFairSharing: options.admissionFairSharing,
+		budgetPolicy:         options.budgetPolicy,
 		hm:                   hierarchy.NewManager[*clusterQueue, *cohort](newCohort),
 		tasCache:             NewTASCache(client),
 	}
@@ -701,6 +710,7 @@ type ClusterQueueUsageStats struct {
 	AdmittedResources  []kueue.FlavorUsage
 	AdmittedWorkloads  int
 	WeightedShare      int64
+	BudgetFlavorUsage  []kueue.BudgetFlavorUsage
 }
 
 // Usage reports the reserved and admitted resources and number of workloads holding them in the ClusterQueue.
@@ -718,6 +728,7 @@ func (c *Cache) Usage(cqObj *kueue.ClusterQueue) (*ClusterQueueUsageStats, error
 		ReservingWorkloads: len(cq.Workloads),
 		AdmittedResources:  getUsage(cq.AdmittedUsage, cq),
 		AdmittedWorkloads:  cq.admittedWorkloadsCount,
+		BudgetFlavorUsage:  getBudgetUsage(cq.resourceNode.),
 	}
 
 	if c.fairSharingEnabled {
@@ -809,6 +820,35 @@ func getUsage(frq resources.FlavorResourceQuantities, cq *clusterQueue) []kueue.
 			})
 			usage = append(usage, outFlvUsage)
 		}
+	}
+	return usage
+}
+
+func getBudgetUsage(bfq resources.FlavorBudgetQuantities, cq *clusterQueue) []kueue.BudgetFlavorUsage {
+	usage := make([]kueue.BudgetFlavorUsage, 0, len(bfq))
+	for _, rg := range cq.BudgetGroups {
+		for _, fName := range rg.Flavors {
+			outBudgetUsage := kueue.BudgetFlavorUsage{
+				Name:        fName,
+				BudgetUsage: make([]kueue.BudgetUsage, 0, len(rg.CoveredResources)),
+			}
+			for rName := range rg.CoveredResources {
+				fr := resources.FlavorBudgetResource{Flavor: fName, Resource: rName}
+				bQuota := cq.resourceNode.BudgetQuota[fr]
+				rUsage := kueue.BudgetUsage{
+					Name:        rName,
+					BudgetHours: bQuota.BudgetHours,
+					BudgetTotal: bq,
+				}
+				outBudgetUsage.BudgetUsage = append(outBudgetUsage.BudgetUsage, rUsage)
+			}
+			// The resourceUsages should be in a stable order to avoid endless creation of update events.
+			sort.Slice(outBudgetUsage.BudgetUsage, func(i, j int) bool {
+				return outBudgetUsage.BudgetUsage[i].Name < outBudgetUsage.BudgetUsage[j].Name
+			})
+			usage = append(usage, outBudgetUsage)
+		}
+
 	}
 	return usage
 }

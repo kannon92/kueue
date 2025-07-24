@@ -65,6 +65,16 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &kueuev1beta1.AdmissionScopeApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("BorrowWithinCohort"):
 		return &kueuev1beta1.BorrowWithinCohortApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("BudgetFlavorUsage"):
+		return &kueuev1beta1.BudgetFlavorUsageApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("BudgetPolicy"):
+		return &kueuev1beta1.BudgetPolicyApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("BudgetQuota"):
+		return &kueuev1beta1.BudgetQuotaApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("BudgetQuotas"):
+		return &kueuev1beta1.BudgetQuotasApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("BudgetUsage"):
+		return &kueuev1beta1.BudgetUsageApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("ClusterQueue"):
 		return &kueuev1beta1.ClusterQueueApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("ClusterQueuePendingWorkload"):

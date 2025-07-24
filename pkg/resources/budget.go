@@ -14,18 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package workload
+package resources
 
 import (
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta1"
-	"sigs.k8s.io/kueue/pkg/resources"
 )
 
-type TASFlavorUsage []TopologyDomainRequests
-type TASUsage map[kueue.ResourceFlavorReference]TASFlavorUsage
+type FlavorBudgetResource struct {
+	Flavor   kueue.ResourceFlavorReference
+	Resource corev1.ResourceName
+}
 
-type Usage struct {
-	Quota  resources.FlavorResourceQuantities
-	TAS    TASUsage
-	Budget resources.FlavorBudgetQuantities
+func (fr FlavorBudgetResource) String() string {
+	return fmt.Sprintf(`{"Flavor":"%s","Resource":"%s"}`, string(fr.Flavor), fr.Resource)
+}
+
+type FlavorBudgetQuantities map[FlavorBudgetResource]int32
+
+func (frq FlavorBudgetQuantities) FlattenFlavors() Requests {
+	result := Requests{}
+	for key, val := range frq {
+		result[key.Resource] += int64(val)
+	}
+	return result
 }

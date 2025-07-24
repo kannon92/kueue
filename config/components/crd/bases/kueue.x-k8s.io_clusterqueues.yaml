@@ -114,6 +114,66 @@ spec:
                 required:
                 - admissionMode
                 type: object
+              budgetPolicy:
+                description: budgetPolicy defines the budgetPolicy for the ClusterQueue.
+                properties:
+                  budgetGroup:
+                    description: |-
+                      BudgetGroup describes a group of resources that this budget applies to.
+                      flavors is the list of flavors that provide the resources of this group.
+                      Typically, different flavors represent different hardware models
+                      (e.g., gpu models, cpu architectures) or pricing models (on-demand vs spot
+                      cpus).
+                      Each flavor MUST list all the resources listed for this group in the same
+                      order as the .resources field.
+                      The list cannot be empty and it can contain up to 16 flavors.
+                    items:
+                      properties:
+                        budgetQuota:
+                          description: |-
+                            resources is the list of quotas for this flavor per resource.
+                            There could be up to 16 resources.
+                          items:
+                            properties:
+                              budgetHours:
+                                description: budgetHours is the number of hours that
+                                  this budget applies to.
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              name:
+                                description: name of this resource.
+                                type: string
+                            required:
+                            - budgetHours
+                            - name
+                            type: object
+                          maxItems: 16
+                          minItems: 1
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - name
+                          x-kubernetes-list-type: map
+                        name:
+                          description: |-
+                            name of this flavor. The name should match the .metadata.name of a
+                            ResourceFlavor. If a matching ResourceFlavor does not exist, the
+                            ClusterQueue will have an Active condition set to False.
+                          maxLength: 253
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    maxItems: 16
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                required:
+                - budgetGroup
+                type: object
               cohort:
                 description: |-
                   cohort that this ClusterQueue belongs to. CQs that belong to the
@@ -521,6 +581,46 @@ spec:
                   clusterQueue and haven't finished yet.
                 format: int32
                 type: integer
+              budgetFlavorUsage:
+                description: budgetFlavorUsage contains the current budget usage for
+                  this ClusterQueue.
+                properties:
+                  budgetUsage:
+                    description: budgetUsage lists the budget usage for the resources
+                      in this flavor.
+                    items:
+                      properties:
+                        budgetHours:
+                          description: budgetHours is the number of hours that this
+                            budget applies to.
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        budgetTotal:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          description: budgetTotal is the total budget allocated for
+                            this ClusterQueue.
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                      required:
+                      - budgetHours
+                      type: object
+                    maxItems: 16
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - name
+                    x-kubernetes-list-type: map
+                  name:
+                    description: name of the flavor.
+                    maxLength: 253
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                required:
+                - budgetUsage
+                - name
+                type: object
               conditions:
                 description: |-
                   conditions hold the latest available observations of the ClusterQueue

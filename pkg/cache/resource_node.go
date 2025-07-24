@@ -31,6 +31,9 @@ type resourceNode struct {
 	// Quotas are the ResourceQuotas specified for the current
 	// node.
 	Quotas map[resources.FlavorResource]ResourceQuota
+	// BudgetQuota are the BudgetQuota specified for the current
+	// node.
+	BudgetQuota map[resources.FlavorResource]BudgetResourceQuota
 	// SubtreeQuota is the sum of the node's quota, as well as
 	// resources available from its children, constrained by
 	// LendingLimits.
@@ -40,11 +43,14 @@ type resourceNode struct {
 	// usage. For Cohorts, this is the sum of childrens'
 	// usages past childrens' guaranteedQuotas.
 	Usage resources.FlavorResourceQuantities
+	// BudgetUsage
+	BudgetUsage resources.FlavorBudgetQuantities
 }
 
 func NewResourceNode() resourceNode {
 	return resourceNode{
 		Quotas:       make(map[resources.FlavorResource]ResourceQuota),
+		BudgetQuota:  make(map[resources.FlavorResource]BudgetResourceQuota),
 		SubtreeQuota: make(resources.FlavorResourceQuantities),
 		Usage:        make(resources.FlavorResourceQuantities),
 	}
@@ -55,8 +61,10 @@ func NewResourceNode() resourceNode {
 func (r resourceNode) Clone() resourceNode {
 	return resourceNode{
 		Quotas:       r.Quotas,
+		BudgetQuota:  r.BudgetQuota,
 		SubtreeQuota: r.SubtreeQuota,
 		Usage:        maps.Clone(r.Usage),
+		BudgetUsage:  maps.Clone(r.BudgetUsage),
 	}
 }
 

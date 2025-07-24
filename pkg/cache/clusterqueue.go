@@ -53,6 +53,7 @@ var (
 type clusterQueue struct {
 	Name              kueue.ClusterQueueReference
 	ResourceGroups    []ResourceGroup
+	BudgetGroups      []BudgetResourceGroup
 	Workloads         map[workload.Reference]*workload.Info
 	WorkloadsNotReady sets.Set[workload.Reference]
 	NamespaceSelector labels.Selector
@@ -69,6 +70,7 @@ type clusterQueue struct {
 	AllocatableResourceGeneration int64
 
 	AdmittedUsage resources.FlavorResourceQuantities
+	BudgetUsage   resources.FlavorBudgetQuantities
 	// localQueues by (namespace/name).
 	localQueues                        map[queue.LocalQueueReference]*LocalQueue
 	podsReadyTracking                  bool
@@ -135,6 +137,8 @@ func (c *clusterQueue) updateClusterQueue(log logr.Logger, in *kueue.ClusterQueu
 		}
 	}
 
+	c.updateBudgetGroups(in.Spec.BudgetPolicy.BudgetGroup)
+
 	nsSelector, err := metav1.LabelSelectorAsSelector(in.Spec.NamespaceSelector)
 	if err != nil {
 		return err
@@ -199,6 +203,17 @@ func (c *clusterQueue) updateQuotasAndResourceGroups(in []kueue.ResourceGroup) b
 		!equality.Semantic.DeepEqual(oldQuotas, c.resourceNode.Quotas)
 }
 
+func (c *clusterQueue) updateBudgetGroups(in []kueue.BudgetQuotas) bool {
+	oldBG := c.BudgetGroups
+	oldBQ := c.resourceNode.BudgetQuota
+	c.resourceNode.BudgetQuota = createBudgetResourceQuota(in)
+	// Start at 1, for backwards compatibility.
+	return c.AllocatableResourceGeneration == 0 ||
+		!equality.Semantic.DeepEqual(oldBG, c.BudgetGroups) ||
+		!equality.Semantic.DeepEqual(oldBQ, c.resourceNode.BudgetQuota)
+
+}
+
 func (c *clusterQueue) updateQueueStatus(log logr.Logger) {
 	if features.Enabled(features.TopologyAwareScheduling) &&
 		len(c.tasFlavors) > 0 &&
@@ -213,6 +228,8 @@ func (c *clusterQueue) updateQueueStatus(log logr.Logger) {
 				c.workloadsNotAccountedForTAS.Delete(k)
 			}
 		}
+	}
+	if features.Enabled(features.BudgetsFlavor) {
 	}
 	status := active
 	if c.isStopped ||
@@ -233,6 +250,14 @@ func (c *clusterQueue) updateQueueStatus(log logr.Logger) {
 		c.Status = status
 		metrics.ReportClusterQueueStatus(c.Name, c.Status)
 	}
+}
+
+func (c *clusterQueue) computeBudgetUsage() []kueue.BudgetFlavorUsage {
+	ret := []kueue.BudgetFlavorUsage{}
+	for k, w := range c.Workloads {
+		flavorBudgetQuantity := w.BudgetFlavorUsage()
+	}
+	return ret
 }
 
 func (c *clusterQueue) isTASSynced() bool {
