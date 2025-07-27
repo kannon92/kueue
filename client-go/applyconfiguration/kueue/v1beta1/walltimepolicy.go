@@ -17,15 +17,10 @@ limitations under the License.
 
 package v1beta1
 
-import (
-	kueuev1beta1 "sigs.k8s.io/kueue/apis/kueue/v1beta1"
-)
-
 // WallTimePolicyApplyConfiguration represents a declarative configuration of the WallTimePolicy type for use
 // with apply.
 type WallTimePolicyApplyConfiguration struct {
-	WallTimeGroup               []WallTimeGroupApplyConfiguration `json:"wallTimeGroup,omitempty"`
-	ActionWhenWallTimeExhausted *kueuev1beta1.StopPolicy          `json:"actionWhenWallTimeExhausted,omitempty"`
+	WallTimeFlavors []WallTimeFlavorApplyConfiguration `json:"wallTimeFlavors,omitempty"`
 }
 
 // WallTimePolicyApplyConfiguration constructs a declarative configuration of the WallTimePolicy type for use with
@@ -34,23 +29,15 @@ func WallTimePolicy() *WallTimePolicyApplyConfiguration {
 	return &WallTimePolicyApplyConfiguration{}
 }
 
-// WithWallTimeGroup adds the given value to the WallTimeGroup field in the declarative configuration
+// WithWallTimeFlavors adds the given value to the WallTimeFlavors field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the WallTimeGroup field.
-func (b *WallTimePolicyApplyConfiguration) WithWallTimeGroup(values ...*WallTimeGroupApplyConfiguration) *WallTimePolicyApplyConfiguration {
+// If called multiple times, values provided by each call will be appended to the WallTimeFlavors field.
+func (b *WallTimePolicyApplyConfiguration) WithWallTimeFlavors(values ...*WallTimeFlavorApplyConfiguration) *WallTimePolicyApplyConfiguration {
 	for i := range values {
 		if values[i] == nil {
-			panic("nil value passed to WithWallTimeGroup")
+			panic("nil value passed to WithWallTimeFlavors")
 		}
-		b.WallTimeGroup = append(b.WallTimeGroup, *values[i])
+		b.WallTimeFlavors = append(b.WallTimeFlavors, *values[i])
 	}
-	return b
-}
-
-// WithActionWhenWallTimeExhausted sets the ActionWhenWallTimeExhausted field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the ActionWhenWallTimeExhausted field is set to the value of the last call.
-func (b *WallTimePolicyApplyConfiguration) WithActionWhenWallTimeExhausted(value kueuev1beta1.StopPolicy) *WallTimePolicyApplyConfiguration {
-	b.ActionWhenWallTimeExhausted = &value
 	return b
 }

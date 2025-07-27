@@ -2579,9 +2579,9 @@ this time would be reset to null.</p>
 
 - [PodSetAssignment](#kueue-x-k8s-io-v1beta1-PodSetAssignment)
 
-- [WallTimeFlavorUsage](#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage)
+- [WallTimeFlavor](#kueue-x-k8s-io-v1beta1-WallTimeFlavor)
 
-- [WallTimeGroup](#kueue-x-k8s-io-v1beta1-WallTimeGroup)
+- [WallTimeFlavorUsage](#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage)
 
 
 <p>ResourceFlavorReference is the name of the ResourceFlavor.</p>
@@ -2847,7 +2847,7 @@ words, it's the used quota that is over the nominalQuota.</p>
 
 - [LocalQueueSpec](#kueue-x-k8s-io-v1beta1-LocalQueueSpec)
 
-- [WallTimePolicy](#kueue-x-k8s-io-v1beta1-WallTimePolicy)
+- [WallTimeFlavor](#kueue-x-k8s-io-v1beta1-WallTimeFlavor)
 
 
 
@@ -2968,38 +2968,7 @@ domain indicated by the values field.</p>
 
 
 
-## `WallTimeFlavorUsage`     {#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage}
-    
-
-**Appears in:**
-
-- [ClusterQueueStatus](#kueue-x-k8s-io-v1beta1-ClusterQueueStatus)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>name</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-ResourceFlavorReference"><code>ResourceFlavorReference</code></a>
-</td>
-<td>
-   <p>name of the flavor.</p>
-</td>
-</tr>
-<tr><td><code>wallTimeUsage</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-WallTimeUsage"><code>[]WallTimeUsage</code></a>
-</td>
-<td>
-   <p>wallTimeUsage lists the wall time	 usage for the resources in this flavor.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `WallTimeGroup`     {#kueue-x-k8s-io-v1beta1-WallTimeGroup}
+## `WallTimeFlavor`     {#kueue-x-k8s-io-v1beta1-WallTimeFlavor}
     
 
 **Appears in:**
@@ -3022,12 +2991,57 @@ ResourceFlavor. If a matching ResourceFlavor does not exist, the
 ClusterQueue will have an Active condition set to False.</p>
 </td>
 </tr>
-<tr><td><code>wallTimeQuotas</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-WallTimeQuota"><code>[]WallTimeQuota</code></a>
+<tr><td><code>wallTimeAllocatedHours</code> <B>[Required]</B><br/>
+<code>int32</code>
 </td>
 <td>
-   <p>wallTimeQuotas is the list of quotas for this flavor per resource.
-There could be up to 16 resources.</p>
+   <p>wallTimeAllocatedHours is the number of hours that this wall time quota applies to.</p>
+</td>
+</tr>
+<tr><td><code>actionWhenWallTimeExhausted</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-StopPolicy"><code>StopPolicy</code></a>
+</td>
+<td>
+   <p>actionWhenWallTimeExhausted defines the action to take when the budget is exhausted.
+The possible values are:</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `WallTimeFlavorUsage`     {#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage}
+    
+
+**Appears in:**
+
+- [ClusterQueueStatus](#kueue-x-k8s-io-v1beta1-ClusterQueueStatus)
+
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>name</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-ResourceFlavorReference"><code>ResourceFlavorReference</code></a>
+</td>
+<td>
+   <p>name of the flavor.</p>
+</td>
+</tr>
+<tr><td><code>wallTimeAllocated</code> <B>[Required]</B><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>wallTimeAllocated is the total number of hours allocated for this ClusterQueue.</p>
+</td>
+</tr>
+<tr><td><code>wallTimeUsed</code> <B>[Required]</B><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>wallTimeUsed is the number of hours used.</p>
 </td>
 </tr>
 </tbody>
@@ -3047,11 +3061,11 @@ There could be up to 16 resources.</p>
 <tbody>
     
   
-<tr><td><code>wallTimeGroup</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-WallTimeGroup"><code>[]WallTimeGroup</code></a>
+<tr><td><code>wallTimeFlavors</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-WallTimeFlavor"><code>[]WallTimeFlavor</code></a>
 </td>
 <td>
-   <p>WallTimeGroup describes a group of resources that this wall time limits applies to.
+   <p>WallTimeFlavors describes a group of resources that this wall time limits applies to.
 flavors is the list of flavors that provide the resources of this group.
 Typically, different flavors represent different hardware models
 (e.g., gpu models, cpu architectures) or pricing models (on-demand vs spot
@@ -3059,83 +3073,6 @@ cpus).
 Each flavor MUST list all the resources listed for this group in the same
 order as the .resources field.
 The list cannot be empty and it can contain up to 16 flavors.</p>
-</td>
-</tr>
-<tr><td><code>actionWhenWallTimeExhausted</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-StopPolicy"><code>StopPolicy</code></a>
-</td>
-<td>
-   <p>actionWhenWallTimeExhausted defines the action to take when the budget is exhausted.
-The possible values are:</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `WallTimeQuota`     {#kueue-x-k8s-io-v1beta1-WallTimeQuota}
-    
-
-**Appears in:**
-
-- [WallTimeGroup](#kueue-x-k8s-io-v1beta1-WallTimeGroup)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>wallTimeHours</code> <B>[Required]</B><br/>
-<code>int32</code>
-</td>
-<td>
-   <p>wallTimeHours is the number of hours that this wall time quota applies to.</p>
-</td>
-</tr>
-<tr><td><code>name</code> <B>[Required]</B><br/>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core"><code>k8s.io/api/core/v1.ResourceName</code></a>
-</td>
-<td>
-   <p>name of this resource.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `WallTimeUsage`     {#kueue-x-k8s-io-v1beta1-WallTimeUsage}
-    
-
-**Appears in:**
-
-- [WallTimeFlavorUsage](#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>name</code> <B>[Required]</B><br/>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core"><code>k8s.io/api/core/v1.ResourceName</code></a>
-</td>
-<td>
-   <p>name of the resource</p>
-</td>
-</tr>
-<tr><td><code>wallTimeAllocated</code> <B>[Required]</B><br/>
-<code>int32</code>
-</td>
-<td>
-   <p>wallTimeAllocated is the total number of hours allocated for this ClusterQueue.</p>
-</td>
-</tr>
-<tr><td><code>wallTimeUsed</code> <B>[Required]</B><br/>
-<code>int32</code>
-</td>
-<td>
-   <p>wallTimeUsed is the number of hours used.</p>
 </td>
 </tr>
 </tbody>

@@ -826,29 +826,16 @@ func getUsage(frq resources.FlavorResourceQuantities, cq *clusterQueue) []kueue.
 
 func getWallTimeUsage(bfq resources.FlavorWallTimeQuantities, cq *clusterQueue) []kueue.WallTimeFlavorUsage {
 	usage := make([]kueue.WallTimeFlavorUsage, 0, len(bfq))
-	for _, rg := range cq.BudgetGroups {
+	for _, rg := range cq.WallTimeGroups {
 		for _, fName := range rg.Flavors {
+			fr := resources.FlavorWallTimeResource{Flavor: fName}
 			outWallTimeUsage := kueue.WallTimeFlavorUsage{
-				Name:          fName,
-				WallTimeUsage: make([]kueue.WallTimeUsage, 0, len(rg.CoveredResources)),
+				Name:              fName,
+				WallTimeUsed:      bfq[fr],
+				WallTimeAllocated: cq.resourceNode.WallTimeQuotas[fr].WallTimeAllocatedHours,
 			}
-			for rName := range rg.CoveredResources {
-				fr := resources.FlavorWallTimeResource{Flavor: fName, Resource: rName}
-				bQuota := cq.resourceNode.WallTimeQuotas[fr]
-				rUsage := kueue.WallTimeUsage{
-					Name:              rName,
-					WallTimeUsed:      bfq[fr],
-					WallTimeAllocated: bQuota.WallTimeAllocatedHours,
-				}
-				outWallTimeUsage.WallTimeUsage = append(outWallTimeUsage.WallTimeUsage, rUsage)
-			}
-			// The budgetUsages should be in a stable order to avoid endless creation of update events.
-			sort.Slice(outWallTimeUsage.WallTimeUsage, func(i, j int) bool {
-				return outWallTimeUsage.WallTimeUsage[i].Name < outWallTimeUsage.WallTimeUsage[j].Name
-			})
 			usage = append(usage, outWallTimeUsage)
 		}
-
 	}
 	return usage
 }

@@ -53,7 +53,7 @@ var (
 type clusterQueue struct {
 	Name              kueue.ClusterQueueReference
 	ResourceGroups    []ResourceGroup
-	BudgetGroups      []BudgetResourceGroup
+	WallTimeGroups    []WallTimeFlavorGroup
 	Workloads         map[workload.Reference]*workload.Info
 	WorkloadsNotReady sets.Set[workload.Reference]
 	NamespaceSelector labels.Selector
@@ -137,7 +137,7 @@ func (c *clusterQueue) updateClusterQueue(log logr.Logger, in *kueue.ClusterQueu
 		}
 	}
 
-	c.updateWallTimeGroups(in.Spec.WallTimePolicy.WallTimeGroup)
+	c.updateWallTimeGroups(in.Spec.WallTimePolicy.WallTimeFlavors)
 
 	nsSelector, err := metav1.LabelSelectorAsSelector(in.Spec.NamespaceSelector)
 	if err != nil {
@@ -203,13 +203,13 @@ func (c *clusterQueue) updateQuotasAndResourceGroups(in []kueue.ResourceGroup) b
 		!equality.Semantic.DeepEqual(oldQuotas, c.resourceNode.Quotas)
 }
 
-func (c *clusterQueue) updateWallTimeGroups(in []kueue.WallTimeGroup) bool {
-	oldBG := c.BudgetGroups
+func (c *clusterQueue) updateWallTimeGroups(in []kueue.WallTimeFlavor) bool {
+	oldBG := c.WallTimeGroups
 	oldBQ := c.resourceNode.WallTimeQuotas
 	c.resourceNode.WallTimeQuotas = createWallTimeResourceQuota(in)
 	// Start at 1, for backwards compatibility.
 	return c.AllocatableResourceGeneration == 0 ||
-		!equality.Semantic.DeepEqual(oldBG, c.BudgetGroups) ||
+		!equality.Semantic.DeepEqual(oldBG, c.WallTimeGroups) ||
 		!equality.Semantic.DeepEqual(oldBQ, c.resourceNode.WallTimeQuotas)
 
 }

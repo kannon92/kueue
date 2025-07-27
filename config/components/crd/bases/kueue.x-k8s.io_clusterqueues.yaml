@@ -510,18 +510,9 @@ spec:
               wallTimePolicy:
                 description: wallTimePolicy defines the wallTimePolicy for the ClusterQueue.
                 properties:
-                  actionWhenWallTimeExhausted:
-                    default: Hold
+                  wallTimeFlavors:
                     description: |-
-                      actionWhenWallTimeExhausted defines the action to take when the budget is exhausted.
-                      The possible values are:
-                    enum:
-                    - Hold
-                    - HoldAndDrain
-                    type: string
-                  wallTimeGroup:
-                    description: |-
-                      WallTimeGroup describes a group of resources that this wall time limits applies to.
+                      WallTimeFlavors describes a group of resources that this wall time limits applies to.
                       flavors is the list of flavors that provide the resources of this group.
                       Typically, different flavors represent different hardware models
                       (e.g., gpu models, cpu architectures) or pricing models (on-demand vs spot
@@ -531,6 +522,15 @@ spec:
                       The list cannot be empty and it can contain up to 16 flavors.
                     items:
                       properties:
+                        actionWhenWallTimeExhausted:
+                          default: Hold
+                          description: |-
+                            actionWhenWallTimeExhausted defines the action to take when the budget is exhausted.
+                            The possible values are:
+                          enum:
+                          - Hold
+                          - HoldAndDrain
+                          type: string
                         name:
                           description: |-
                             name of this flavor. The name should match the .metadata.name of a
@@ -539,33 +539,15 @@ spec:
                           maxLength: 253
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                           type: string
-                        wallTimeQuotas:
-                          description: |-
-                            wallTimeQuotas is the list of quotas for this flavor per resource.
-                            There could be up to 16 resources.
-                          items:
-                            properties:
-                              name:
-                                description: name of this resource.
-                                type: string
-                              wallTimeHours:
-                                description: wallTimeHours is the number of hours
-                                  that this wall time quota applies to.
-                                format: int32
-                                minimum: 1
-                                type: integer
-                            required:
-                            - name
-                            - wallTimeHours
-                            type: object
-                          maxItems: 16
-                          minItems: 1
-                          type: array
-                          x-kubernetes-list-map-keys:
-                          - name
-                          x-kubernetes-list-type: map
+                        wallTimeAllocatedHours:
+                          description: wallTimeAllocatedHours is the number of hours
+                            that this wall time quota applies to.
+                          format: int32
+                          minimum: 1
+                          type: integer
                       required:
                       - name
+                      - wallTimeAllocatedHours
                       type: object
                     maxItems: 16
                     minItems: 1
@@ -574,7 +556,7 @@ spec:
                     - name
                     x-kubernetes-list-type: map
                 required:
-                - wallTimeGroup
+                - wallTimeFlavors
                 type: object
             type: object
             x-kubernetes-validations:
@@ -863,37 +845,20 @@ spec:
                       maxLength: 253
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
-                    wallTimeUsage:
-                      description: "wallTimeUsage lists the wall time\t usage for
-                        the resources in this flavor."
-                      items:
-                        properties:
-                          name:
-                            description: name of the resource
-                            type: string
-                          wallTimeAllocated:
-                            description: wallTimeAllocated is the total number of
-                              hours allocated for this ClusterQueue.
-                            format: int32
-                            minimum: 1
-                            type: integer
-                          wallTimeUsed:
-                            description: wallTimeUsed is the number of hours used.
-                            format: int32
-                            minimum: 1
-                            type: integer
-                        required:
-                        - name
-                        - wallTimeUsed
-                        type: object
-                      maxItems: 16
-                      type: array
-                      x-kubernetes-list-map-keys:
-                      - name
-                      x-kubernetes-list-type: map
+                    wallTimeAllocated:
+                      description: wallTimeAllocated is the total number of hours
+                        allocated for this ClusterQueue.
+                      format: int32
+                      minimum: 1
+                      type: integer
+                    wallTimeUsed:
+                      description: wallTimeUsed is the number of hours used.
+                      format: int32
+                      minimum: 1
+                      type: integer
                   required:
                   - name
-                  - wallTimeUsage
+                  - wallTimeUsed
                   type: object
                 maxItems: 16
                 type: array

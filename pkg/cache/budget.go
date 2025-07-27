@@ -17,27 +17,24 @@ limitations under the License.
 package cache
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta1"
 	"sigs.k8s.io/kueue/pkg/resources"
 )
 
-type BudgetResourceGroup struct {
-	CoveredResources sets.Set[corev1.ResourceName]
-	Flavors          []kueue.ResourceFlavorReference
+type WallTimeFlavorGroup struct {
+	Flavors []kueue.ResourceFlavorReference
 	// The set of key labels from all flavors.
 	// Those keys define the affinity terms of a workload
 	// that can be matched against the flavors.
 	LabelKeys sets.Set[string]
 }
 
-func (rg *BudgetResourceGroup) Clone() BudgetResourceGroup {
-	return BudgetResourceGroup{
-		CoveredResources: rg.CoveredResources.Clone(),
-		Flavors:          rg.Flavors,
-		LabelKeys:        rg.LabelKeys.Clone(),
+func (rg *WallTimeFlavorGroup) Clone() WallTimeFlavorGroup {
+	return WallTimeFlavorGroup{
+		Flavors:   rg.Flavors,
+		LabelKeys: rg.LabelKeys.Clone(),
 	}
 }
 
@@ -45,16 +42,11 @@ type WallTimeResourceQuota struct {
 	WallTimeAllocatedHours int32
 }
 
-func createWallTimeResourceQuota(kueueRgs []kueue.WallTimeGroup) map[resources.FlavorWallTimeResource]WallTimeResourceQuota {
-	frCount := 0
-	for _, rg := range kueueRgs {
-		frCount += len(rg.WallTimeQuotas)
-	}
+func createWallTimeResourceQuota(kueueRgs []kueue.WallTimeFlavor) map[resources.FlavorWallTimeResource]WallTimeResourceQuota {
+	frCount := len(kueueRgs)
 	quotas := make(map[resources.FlavorWallTimeResource]WallTimeResourceQuota, frCount)
-	for _, kueueRg := range kueueRgs {
-		for _, bq := range kueueRg.WallTimeQuotas {
-			quotas[resources.FlavorWallTimeResource{Flavor: kueueRg.Name, Resource: bq.Name}] = WallTimeResourceQuota{bq.WallTimeAllocatedHours}
-		}
+	for _, bq := range kueueRgs {
+		quotas[resources.FlavorWallTimeResource{Flavor: bq.Name}] = WallTimeResourceQuota{bq.WallTimeAllocatedHours}
 	}
 	return quotas
 }

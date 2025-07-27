@@ -24,8 +24,9 @@ import (
 // WallTimeFlavorUsageApplyConfiguration represents a declarative configuration of the WallTimeFlavorUsage type for use
 // with apply.
 type WallTimeFlavorUsageApplyConfiguration struct {
-	Name          *kueuev1beta1.ResourceFlavorReference `json:"name,omitempty"`
-	WallTimeUsage []WallTimeUsageApplyConfiguration     `json:"wallTimeUsage,omitempty"`
+	Name              *kueuev1beta1.ResourceFlavorReference `json:"name,omitempty"`
+	WallTimeAllocated *int32                                `json:"wallTimeAllocated,omitempty"`
+	WallTimeUsed      *int32                                `json:"wallTimeUsed,omitempty"`
 }
 
 // WallTimeFlavorUsageApplyConfiguration constructs a declarative configuration of the WallTimeFlavorUsage type for use with
@@ -42,15 +43,18 @@ func (b *WallTimeFlavorUsageApplyConfiguration) WithName(value kueuev1beta1.Reso
 	return b
 }
 
-// WithWallTimeUsage adds the given value to the WallTimeUsage field in the declarative configuration
-// and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the WallTimeUsage field.
-func (b *WallTimeFlavorUsageApplyConfiguration) WithWallTimeUsage(values ...*WallTimeUsageApplyConfiguration) *WallTimeFlavorUsageApplyConfiguration {
-	for i := range values {
-		if values[i] == nil {
-			panic("nil value passed to WithWallTimeUsage")
-		}
-		b.WallTimeUsage = append(b.WallTimeUsage, *values[i])
-	}
+// WithWallTimeAllocated sets the WallTimeAllocated field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the WallTimeAllocated field is set to the value of the last call.
+func (b *WallTimeFlavorUsageApplyConfiguration) WithWallTimeAllocated(value int32) *WallTimeFlavorUsageApplyConfiguration {
+	b.WallTimeAllocated = &value
+	return b
+}
+
+// WithWallTimeUsed sets the WallTimeUsed field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the WallTimeUsed field is set to the value of the last call.
+func (b *WallTimeFlavorUsageApplyConfiguration) WithWallTimeUsed(value int32) *WallTimeFlavorUsageApplyConfiguration {
+	b.WallTimeUsed = &value
 	return b
 }
