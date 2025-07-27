@@ -32,7 +32,7 @@ type ClusterQueueStatusApplyConfiguration struct {
 	Conditions             []v1.ConditionApplyConfiguration                      `json:"conditions,omitempty"`
 	PendingWorkloadsStatus *ClusterQueuePendingWorkloadsStatusApplyConfiguration `json:"pendingWorkloadsStatus,omitempty"`
 	FairSharing            *FairSharingStatusApplyConfiguration                  `json:"fairSharing,omitempty"`
-	BudgetFlavorUsage      *BudgetFlavorUsageApplyConfiguration                  `json:"budgetFlavorUsage,omitempty"`
+	WallTimeFlavorUsage    []WallTimeFlavorUsageApplyConfiguration               `json:"wallTimeFlavorUsage,omitempty"`
 }
 
 // ClusterQueueStatusApplyConfiguration constructs a declarative configuration of the ClusterQueueStatus type for use with
@@ -120,10 +120,15 @@ func (b *ClusterQueueStatusApplyConfiguration) WithFairSharing(value *FairSharin
 	return b
 }
 
-// WithBudgetFlavorUsage sets the BudgetFlavorUsage field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the BudgetFlavorUsage field is set to the value of the last call.
-func (b *ClusterQueueStatusApplyConfiguration) WithBudgetFlavorUsage(value *BudgetFlavorUsageApplyConfiguration) *ClusterQueueStatusApplyConfiguration {
-	b.BudgetFlavorUsage = value
+// WithWallTimeFlavorUsage adds the given value to the WallTimeFlavorUsage field in the declarative configuration
+// and returns the receiver, so that objects can be build by chaining "With" function invocations.
+// If called multiple times, values provided by each call will be appended to the WallTimeFlavorUsage field.
+func (b *ClusterQueueStatusApplyConfiguration) WithWallTimeFlavorUsage(values ...*WallTimeFlavorUsageApplyConfiguration) *ClusterQueueStatusApplyConfiguration {
+	for i := range values {
+		if values[i] == nil {
+			panic("nil value passed to WithWallTimeFlavorUsage")
+		}
+		b.WallTimeFlavorUsage = append(b.WallTimeFlavorUsage, *values[i])
+	}
 	return b
 }

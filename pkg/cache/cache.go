@@ -705,12 +705,12 @@ func (c *Cache) ForgetWorkload(log logr.Logger, w *kueue.Workload) error {
 }
 
 type ClusterQueueUsageStats struct {
-	ReservedResources  []kueue.FlavorUsage
-	ReservingWorkloads int
-	AdmittedResources  []kueue.FlavorUsage
-	AdmittedWorkloads  int
-	WeightedShare      int64
-	BudgetFlavorUsage  []kueue.BudgetFlavorUsage
+	ReservedResources   []kueue.FlavorUsage
+	ReservingWorkloads  int
+	AdmittedResources   []kueue.FlavorUsage
+	AdmittedWorkloads   int
+	WeightedShare       int64
+	WallTimeFlavorUsage []kueue.WallTimeFlavorUsage
 }
 
 // Usage reports the reserved and admitted resources and number of workloads holding them in the ClusterQueue.
@@ -724,11 +724,11 @@ func (c *Cache) Usage(cqObj *kueue.ClusterQueue) (*ClusterQueueUsageStats, error
 	}
 
 	stats := &ClusterQueueUsageStats{
-		ReservedResources:  getUsage(cq.resourceNode.Usage, cq),
-		ReservingWorkloads: len(cq.Workloads),
-		AdmittedResources:  getUsage(cq.AdmittedUsage, cq),
-		AdmittedWorkloads:  cq.admittedWorkloadsCount,
-		BudgetFlavorUsage:  getBudgetUsage(cq.resourceNode.),
+		ReservedResources:   getUsage(cq.resourceNode.Usage, cq),
+		ReservingWorkloads:  len(cq.Workloads),
+		AdmittedResources:   getUsage(cq.AdmittedUsage, cq),
+		AdmittedWorkloads:   cq.admittedWorkloadsCount,
+		WallTimeFlavorUsage: getWallTimeUsage(cq.resourceNode.WallTimeUsage, cq),
 	}
 
 	if c.fairSharingEnabled {
@@ -824,29 +824,29 @@ func getUsage(frq resources.FlavorResourceQuantities, cq *clusterQueue) []kueue.
 	return usage
 }
 
-func getBudgetUsage(bfq resources.FlavorBudgetQuantities, cq *clusterQueue) []kueue.BudgetFlavorUsage {
-	usage := make([]kueue.BudgetFlavorUsage, 0, len(bfq))
+func getWallTimeUsage(bfq resources.FlavorWallTimeQuantities, cq *clusterQueue) []kueue.WallTimeFlavorUsage {
+	usage := make([]kueue.WallTimeFlavorUsage, 0, len(bfq))
 	for _, rg := range cq.BudgetGroups {
 		for _, fName := range rg.Flavors {
-			outBudgetUsage := kueue.BudgetFlavorUsage{
-				Name:        fName,
-				BudgetUsage: make([]kueue.BudgetUsage, 0, len(rg.CoveredResources)),
+			outWallTimeUsage := kueue.WallTimeFlavorUsage{
+				Name:          fName,
+				WallTimeUsage: make([]kueue.WallTimeUsage, 0, len(rg.CoveredResources)),
 			}
 			for rName := range rg.CoveredResources {
-				fr := resources.FlavorBudgetResource{Flavor: fName, Resource: rName}
-				bQuota := cq.resourceNode.BudgetQuota[fr]
-				rUsage := kueue.BudgetUsage{
-					Name:        rName,
-					BudgetHours: bQuota.BudgetHours,
-					BudgetTotal: bq,
+				fr := resources.FlavorWallTimeResource{Flavor: fName, Resource: rName}
+				bQuota := cq.resourceNode.WallTimeQuotas[fr]
+				rUsage := kueue.WallTimeUsage{
+					Name:              rName,
+					WallTimeUsed:      bfq[fr],
+					WallTimeAllocated: bQuota.WallTimeAllocatedHours,
 				}
-				outBudgetUsage.BudgetUsage = append(outBudgetUsage.BudgetUsage, rUsage)
+				outWallTimeUsage.WallTimeUsage = append(outWallTimeUsage.WallTimeUsage, rUsage)
 			}
-			// The resourceUsages should be in a stable order to avoid endless creation of update events.
-			sort.Slice(outBudgetUsage.BudgetUsage, func(i, j int) bool {
-				return outBudgetUsage.BudgetUsage[i].Name < outBudgetUsage.BudgetUsage[j].Name
+			// The budgetUsages should be in a stable order to avoid endless creation of update events.
+			sort.Slice(outWallTimeUsage.WallTimeUsage, func(i, j int) bool {
+				return outWallTimeUsage.WallTimeUsage[i].Name < outWallTimeUsage.WallTimeUsage[j].Name
 			})
-			usage = append(usage, outBudgetUsage)
+			usage = append(usage, outWallTimeUsage)
 		}
 
 	}

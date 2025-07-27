@@ -65,16 +65,6 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &kueuev1beta1.AdmissionScopeApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("BorrowWithinCohort"):
 		return &kueuev1beta1.BorrowWithinCohortApplyConfiguration{}
-	case v1beta1.SchemeGroupVersion.WithKind("BudgetFlavorUsage"):
-		return &kueuev1beta1.BudgetFlavorUsageApplyConfiguration{}
-	case v1beta1.SchemeGroupVersion.WithKind("BudgetPolicy"):
-		return &kueuev1beta1.BudgetPolicyApplyConfiguration{}
-	case v1beta1.SchemeGroupVersion.WithKind("BudgetQuota"):
-		return &kueuev1beta1.BudgetQuotaApplyConfiguration{}
-	case v1beta1.SchemeGroupVersion.WithKind("BudgetQuotas"):
-		return &kueuev1beta1.BudgetQuotasApplyConfiguration{}
-	case v1beta1.SchemeGroupVersion.WithKind("BudgetUsage"):
-		return &kueuev1beta1.BudgetUsageApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("ClusterQueue"):
 		return &kueuev1beta1.ClusterQueueApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("ClusterQueuePendingWorkload"):
@@ -169,6 +159,16 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &kueuev1beta1.TopologyDomainAssignmentApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("TopologyInfo"):
 		return &kueuev1beta1.TopologyInfoApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("WallTimeFlavorUsage"):
+		return &kueuev1beta1.WallTimeFlavorUsageApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("WallTimeGroup"):
+		return &kueuev1beta1.WallTimeGroupApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("WallTimePolicy"):
+		return &kueuev1beta1.WallTimePolicyApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("WallTimeQuota"):
+		return &kueuev1beta1.WallTimeQuotaApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("WallTimeUsage"):
+		return &kueuev1beta1.WallTimeUsageApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("Workload"):
 		return &kueuev1beta1.WorkloadApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("WorkloadPriorityClass"):

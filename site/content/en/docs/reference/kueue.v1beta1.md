@@ -747,164 +747,6 @@ policy can be preempted by the borrowing workload.</p>
 
 
 
-## `BudgetFlavorUsage`     {#kueue-x-k8s-io-v1beta1-BudgetFlavorUsage}
-    
-
-**Appears in:**
-
-- [ClusterQueueStatus](#kueue-x-k8s-io-v1beta1-ClusterQueueStatus)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>name</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-ResourceFlavorReference"><code>ResourceFlavorReference</code></a>
-</td>
-<td>
-   <p>name of the flavor.</p>
-</td>
-</tr>
-<tr><td><code>budgetUsage</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-BudgetUsage"><code>[]BudgetUsage</code></a>
-</td>
-<td>
-   <p>budgetUsage lists the budget usage for the resources in this flavor.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `BudgetPolicy`     {#kueue-x-k8s-io-v1beta1-BudgetPolicy}
-    
-
-**Appears in:**
-
-- [ClusterQueueSpec](#kueue-x-k8s-io-v1beta1-ClusterQueueSpec)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>budgetGroup</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-BudgetQuotas"><code>[]BudgetQuotas</code></a>
-</td>
-<td>
-   <p>BudgetGroup describes a group of resources that this budget applies to.
-flavors is the list of flavors that provide the resources of this group.
-Typically, different flavors represent different hardware models
-(e.g., gpu models, cpu architectures) or pricing models (on-demand vs spot
-cpus).
-Each flavor MUST list all the resources listed for this group in the same
-order as the .resources field.
-The list cannot be empty and it can contain up to 16 flavors.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `BudgetQuota`     {#kueue-x-k8s-io-v1beta1-BudgetQuota}
-    
-
-**Appears in:**
-
-- [BudgetQuotas](#kueue-x-k8s-io-v1beta1-BudgetQuotas)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>name</code> <B>[Required]</B><br/>
-<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core"><code>k8s.io/api/core/v1.ResourceName</code></a>
-</td>
-<td>
-   <p>name of this resource.</p>
-</td>
-</tr>
-<tr><td><code>budgetHours</code> <B>[Required]</B><br/>
-<code>int32</code>
-</td>
-<td>
-   <p>budgetHours is the number of hours that this budget applies to.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `BudgetQuotas`     {#kueue-x-k8s-io-v1beta1-BudgetQuotas}
-    
-
-**Appears in:**
-
-- [BudgetPolicy](#kueue-x-k8s-io-v1beta1-BudgetPolicy)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>name</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-ResourceFlavorReference"><code>ResourceFlavorReference</code></a>
-</td>
-<td>
-   <p>name of this flavor. The name should match the .metadata.name of a
-ResourceFlavor. If a matching ResourceFlavor does not exist, the
-ClusterQueue will have an Active condition set to False.</p>
-</td>
-</tr>
-<tr><td><code>budgetQuota</code> <B>[Required]</B><br/>
-<a href="#kueue-x-k8s-io-v1beta1-BudgetQuota"><code>[]BudgetQuota</code></a>
-</td>
-<td>
-   <p>resources is the list of quotas for this flavor per resource.
-There could be up to 16 resources.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
-## `BudgetUsage`     {#kueue-x-k8s-io-v1beta1-BudgetUsage}
-    
-
-**Appears in:**
-
-- [BudgetFlavorUsage](#kueue-x-k8s-io-v1beta1-BudgetFlavorUsage)
-
-
-
-<table class="table">
-<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
-<tbody>
-    
-  
-<tr><td><code>budgetTotal</code> <B>[Required]</B><br/>
-<a href="https://pkg.go.dev/k8s.io/apimachinery/pkg/api/resource#Quantity"><code>k8s.io/apimachinery/pkg/api/resource.Quantity</code></a>
-</td>
-<td>
-   <p>budgetTotal is the total budget allocated for this ClusterQueue.</p>
-</td>
-</tr>
-<tr><td><code>budgetHours</code> <B>[Required]</B><br/>
-<code>int32</code>
-</td>
-<td>
-   <p>budgetHours is the number of hours that this budget applies to.</p>
-</td>
-</tr>
-</tbody>
-</table>
-
 ## `CheckState`     {#kueue-x-k8s-io-v1beta1-CheckState}
     
 (Alias of `string`)
@@ -1212,11 +1054,11 @@ if FairSharing is enabled in the Kueue configuration.</p>
    <p>admissionScope indicates whether ClusterQueue uses the Admission Fair Sharing</p>
 </td>
 </tr>
-<tr><td><code>budgetPolicy</code><br/>
-<a href="#kueue-x-k8s-io-v1beta1-BudgetPolicy"><code>BudgetPolicy</code></a>
+<tr><td><code>wallTimePolicy</code><br/>
+<a href="#kueue-x-k8s-io-v1beta1-WallTimePolicy"><code>WallTimePolicy</code></a>
 </td>
 <td>
-   <p>budgetPolicy defines the budgetPolicy for the ClusterQueue.</p>
+   <p>wallTimePolicy defines the wallTimePolicy for the ClusterQueue.</p>
 </td>
 </tr>
 </tbody>
@@ -1306,11 +1148,11 @@ when participating in Fair Sharing.
 This is recorded only when Fair Sharing is enabled in the Kueue configuration.</p>
 </td>
 </tr>
-<tr><td><code>budgetFlavorUsage</code><br/>
-<a href="#kueue-x-k8s-io-v1beta1-BudgetFlavorUsage"><code>BudgetFlavorUsage</code></a>
+<tr><td><code>wallTimeFlavorUsage</code><br/>
+<a href="#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage"><code>[]WallTimeFlavorUsage</code></a>
 </td>
 <td>
-   <p>budgetFlavorUsage contains the current budget usage for this ClusterQueue.</p>
+   <p>wallTimeFlavorUsage contains the current wall time usage for this ClusterQueue.</p>
 </td>
 </tr>
 </tbody>
@@ -2727,10 +2569,6 @@ this time would be reset to null.</p>
 
 - [AdmissionCheckStrategyRule](#kueue-x-k8s-io-v1beta1-AdmissionCheckStrategyRule)
 
-- [BudgetFlavorUsage](#kueue-x-k8s-io-v1beta1-BudgetFlavorUsage)
-
-- [BudgetQuotas](#kueue-x-k8s-io-v1beta1-BudgetQuotas)
-
 - [FlavorQuotas](#kueue-x-k8s-io-v1beta1-FlavorQuotas)
 
 - [FlavorUsage](#kueue-x-k8s-io-v1beta1-FlavorUsage)
@@ -2740,6 +2578,10 @@ this time would be reset to null.</p>
 - [LocalQueueFlavorUsage](#kueue-x-k8s-io-v1beta1-LocalQueueFlavorUsage)
 
 - [PodSetAssignment](#kueue-x-k8s-io-v1beta1-PodSetAssignment)
+
+- [WallTimeFlavorUsage](#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage)
+
+- [WallTimeGroup](#kueue-x-k8s-io-v1beta1-WallTimeGroup)
 
 
 <p>ResourceFlavorReference is the name of the ResourceFlavor.</p>
@@ -3005,6 +2847,8 @@ words, it's the used quota that is over the nominalQuota.</p>
 
 - [LocalQueueSpec](#kueue-x-k8s-io-v1beta1-LocalQueueSpec)
 
+- [WallTimePolicy](#kueue-x-k8s-io-v1beta1-WallTimePolicy)
+
 
 
 
@@ -3123,6 +2967,179 @@ domain indicated by the values field.</p>
 
 
 
+
+## `WallTimeFlavorUsage`     {#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage}
+    
+
+**Appears in:**
+
+- [ClusterQueueStatus](#kueue-x-k8s-io-v1beta1-ClusterQueueStatus)
+
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>name</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-ResourceFlavorReference"><code>ResourceFlavorReference</code></a>
+</td>
+<td>
+   <p>name of the flavor.</p>
+</td>
+</tr>
+<tr><td><code>wallTimeUsage</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-WallTimeUsage"><code>[]WallTimeUsage</code></a>
+</td>
+<td>
+   <p>wallTimeUsage lists the wall time	 usage for the resources in this flavor.</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `WallTimeGroup`     {#kueue-x-k8s-io-v1beta1-WallTimeGroup}
+    
+
+**Appears in:**
+
+- [WallTimePolicy](#kueue-x-k8s-io-v1beta1-WallTimePolicy)
+
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>name</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-ResourceFlavorReference"><code>ResourceFlavorReference</code></a>
+</td>
+<td>
+   <p>name of this flavor. The name should match the .metadata.name of a
+ResourceFlavor. If a matching ResourceFlavor does not exist, the
+ClusterQueue will have an Active condition set to False.</p>
+</td>
+</tr>
+<tr><td><code>wallTimeQuotas</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-WallTimeQuota"><code>[]WallTimeQuota</code></a>
+</td>
+<td>
+   <p>wallTimeQuotas is the list of quotas for this flavor per resource.
+There could be up to 16 resources.</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `WallTimePolicy`     {#kueue-x-k8s-io-v1beta1-WallTimePolicy}
+    
+
+**Appears in:**
+
+- [ClusterQueueSpec](#kueue-x-k8s-io-v1beta1-ClusterQueueSpec)
+
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>wallTimeGroup</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-WallTimeGroup"><code>[]WallTimeGroup</code></a>
+</td>
+<td>
+   <p>WallTimeGroup describes a group of resources that this wall time limits applies to.
+flavors is the list of flavors that provide the resources of this group.
+Typically, different flavors represent different hardware models
+(e.g., gpu models, cpu architectures) or pricing models (on-demand vs spot
+cpus).
+Each flavor MUST list all the resources listed for this group in the same
+order as the .resources field.
+The list cannot be empty and it can contain up to 16 flavors.</p>
+</td>
+</tr>
+<tr><td><code>actionWhenWallTimeExhausted</code> <B>[Required]</B><br/>
+<a href="#kueue-x-k8s-io-v1beta1-StopPolicy"><code>StopPolicy</code></a>
+</td>
+<td>
+   <p>actionWhenWallTimeExhausted defines the action to take when the budget is exhausted.
+The possible values are:</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `WallTimeQuota`     {#kueue-x-k8s-io-v1beta1-WallTimeQuota}
+    
+
+**Appears in:**
+
+- [WallTimeGroup](#kueue-x-k8s-io-v1beta1-WallTimeGroup)
+
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>wallTimeHours</code> <B>[Required]</B><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>wallTimeHours is the number of hours that this wall time quota applies to.</p>
+</td>
+</tr>
+<tr><td><code>name</code> <B>[Required]</B><br/>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core"><code>k8s.io/api/core/v1.ResourceName</code></a>
+</td>
+<td>
+   <p>name of this resource.</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `WallTimeUsage`     {#kueue-x-k8s-io-v1beta1-WallTimeUsage}
+    
+
+**Appears in:**
+
+- [WallTimeFlavorUsage](#kueue-x-k8s-io-v1beta1-WallTimeFlavorUsage)
+
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>name</code> <B>[Required]</B><br/>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.28/#resourcename-v1-core"><code>k8s.io/api/core/v1.ResourceName</code></a>
+</td>
+<td>
+   <p>name of the resource</p>
+</td>
+</tr>
+<tr><td><code>wallTimeAllocated</code> <B>[Required]</B><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>wallTimeAllocated is the total number of hours allocated for this ClusterQueue.</p>
+</td>
+</tr>
+<tr><td><code>wallTimeUsed</code> <B>[Required]</B><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>wallTimeUsed is the number of hours used.</p>
+</td>
+</tr>
+</tbody>
+</table>
 
 ## `WorkloadSchedulingStatsEviction`     {#kueue-x-k8s-io-v1beta1-WorkloadSchedulingStatsEviction}
     

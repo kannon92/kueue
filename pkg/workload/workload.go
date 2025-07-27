@@ -262,9 +262,9 @@ func (i *Info) CanBePartiallyAdmitted() bool {
 // quota and TAS usage.
 func (i *Info) Usage() Usage {
 	return Usage{
-		Quota:  i.FlavorResourceUsage(),
-		TAS:    i.TASUsage(),
-		Budget: i.BudgetFlavorUsage(),
+		Quota:    i.FlavorResourceUsage(),
+		TAS:      i.TASUsage(),
+		WallTime: i.WallTimeFlavorUsage(),
 	}
 }
 
@@ -286,16 +286,18 @@ func (i *Info) FlavorResourceUsage() resources.FlavorResourceQuantities {
 
 // BudgetFlavorUsage returns the total budget usage for the workload,
 // per flavor (if assigned, otherwise flavor shows as empty string), per resource.
-func (i *Info) BudgetFlavorUsage() resources.FlavorBudgetQuantities {
-	total := make(resources.FlavorBudgetQuantities)
+func (i *Info) WallTimeFlavorUsage() resources.FlavorWallTimeQuantities {
+	total := make(resources.FlavorWallTimeQuantities)
 	if i == nil {
 		return total
 	}
 
 	for _, psReqs := range i.TotalRequests {
-		for res, _ := range psReqs.Requests {
+		for res := range psReqs.Requests {
 			flv := psReqs.Flavors[res]
-			total[resources.FlavorBudgetResource{Flavor: flv, Resource: res}] += int32(*i.Obj.Status.AccumulatedPastExexcutionTimeSeconds)
+			seconds := *i.Obj.Status.AccumulatedPastExexcutionTimeSeconds
+			hours := int32(seconds / 3600)
+			total[resources.FlavorWallTimeResource{Flavor: flv, Resource: res}] += hours
 		}
 	}
 	return total

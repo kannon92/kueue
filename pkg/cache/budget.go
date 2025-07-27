@@ -41,19 +41,19 @@ func (rg *BudgetResourceGroup) Clone() BudgetResourceGroup {
 	}
 }
 
-type BudgetResourceQuota struct {
-	BudgetHours int32
+type WallTimeResourceQuota struct {
+	WallTimeAllocatedHours int32
 }
 
-func createBudgetResourceQuota(kueueRgs []kueue.BudgetQuotas) map[resources.FlavorResource]BudgetResourceQuota {
+func createWallTimeResourceQuota(kueueRgs []kueue.WallTimeGroup) map[resources.FlavorWallTimeResource]WallTimeResourceQuota {
 	frCount := 0
 	for _, rg := range kueueRgs {
-		frCount += len(rg.BudgetQuota)
+		frCount += len(rg.WallTimeQuotas)
 	}
-	quotas := make(map[resources.FlavorResource]BudgetResourceQuota, frCount)
+	quotas := make(map[resources.FlavorWallTimeResource]WallTimeResourceQuota, frCount)
 	for _, kueueRg := range kueueRgs {
-		for _, bq := range kueueRg.BudgetQuota {
-			quotas[resources.FlavorResource{Flavor: kueueRg.Name, Resource: bq.Name}] = BudgetResourceQuota{bq.BudgetHours}
+		for _, bq := range kueueRg.WallTimeQuotas {
+			quotas[resources.FlavorWallTimeResource{Flavor: kueueRg.Name, Resource: bq.Name}] = WallTimeResourceQuota{bq.WallTimeAllocatedHours}
 		}
 	}
 	return quotas

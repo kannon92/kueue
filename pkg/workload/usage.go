@@ -25,7 +25,7 @@ type TASFlavorUsage []TopologyDomainRequests
 type TASUsage map[kueue.ResourceFlavorReference]TASFlavorUsage
 
 type Usage struct {
-	Quota  resources.FlavorResourceQuantities
-	TAS    TASUsage
-	Budget resources.FlavorBudgetQuantities
+	Quota    resources.FlavorResourceQuantities
+	TAS      TASUsage
+	WallTime resources.FlavorWallTimeQuantities
 }

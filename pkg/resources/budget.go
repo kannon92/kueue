@@ -23,18 +23,18 @@ import (
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta1"
 )
 
-type FlavorBudgetResource struct {
+type FlavorWallTimeResource struct {
 	Flavor   kueue.ResourceFlavorReference
 	Resource corev1.ResourceName
 }
 
-func (fr FlavorBudgetResource) String() string {
+func (fr FlavorWallTimeResource) String() string {
 	return fmt.Sprintf(`{"Flavor":"%s","Resource":"%s"}`, string(fr.Flavor), fr.Resource)
 }
 
-type FlavorBudgetQuantities map[FlavorBudgetResource]int32
+type FlavorWallTimeQuantities map[FlavorWallTimeResource]int32
 
-func (frq FlavorBudgetQuantities) FlattenFlavors() Requests {
+func (frq FlavorWallTimeQuantities) FlattenFlavors() Requests {
 	result := Requests{}
 	for key, val := range frq {
 		result[key.Resource] += int64(val)

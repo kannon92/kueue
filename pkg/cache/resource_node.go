@@ -31,9 +31,9 @@ type resourceNode struct {
 	// Quotas are the ResourceQuotas specified for the current
 	// node.
 	Quotas map[resources.FlavorResource]ResourceQuota
-	// BudgetQuota are the BudgetQuota specified for the current
+	// WallTimeQuotas are the BudgetQuota specified for the current
 	// node.
-	BudgetQuota map[resources.FlavorResource]BudgetResourceQuota
+	WallTimeQuotas map[resources.FlavorWallTimeResource]WallTimeResourceQuota
 	// SubtreeQuota is the sum of the node's quota, as well as
 	// resources available from its children, constrained by
 	// LendingLimits.
@@ -44,15 +44,16 @@ type resourceNode struct {
 	// usages past childrens' guaranteedQuotas.
 	Usage resources.FlavorResourceQuantities
 	// BudgetUsage
-	BudgetUsage resources.FlavorBudgetQuantities
+	WallTimeUsage resources.FlavorWallTimeQuantities
 }
 
 func NewResourceNode() resourceNode {
 	return resourceNode{
-		Quotas:       make(map[resources.FlavorResource]ResourceQuota),
-		BudgetQuota:  make(map[resources.FlavorResource]BudgetResourceQuota),
-		SubtreeQuota: make(resources.FlavorResourceQuantities),
-		Usage:        make(resources.FlavorResourceQuantities),
+		Quotas:         make(map[resources.FlavorResource]ResourceQuota),
+		WallTimeQuotas: make(map[resources.FlavorWallTimeResource]WallTimeResourceQuota),
+		SubtreeQuota:   make(resources.FlavorResourceQuantities),
+		Usage:          make(resources.FlavorResourceQuantities),
+		WallTimeUsage:  make(resources.FlavorWallTimeQuantities),
 	}
 }
 
@@ -60,11 +61,11 @@ func NewResourceNode() resourceNode {
 // Quota and SubtreeQuota (these are replaced with new maps upon update).
 func (r resourceNode) Clone() resourceNode {
 	return resourceNode{
-		Quotas:       r.Quotas,
-		BudgetQuota:  r.BudgetQuota,
-		SubtreeQuota: r.SubtreeQuota,
-		Usage:        maps.Clone(r.Usage),
-		BudgetUsage:  maps.Clone(r.BudgetUsage),
+		Quotas:         r.Quotas,
+		WallTimeQuotas: r.WallTimeQuotas,
+		SubtreeQuota:   r.SubtreeQuota,
+		Usage:          maps.Clone(r.Usage),
+		WallTimeUsage:  maps.Clone(r.WallTimeUsage),
 	}
 }
 
@@ -149,6 +150,14 @@ func addUsage(node hierarchicalResourceNode, fr resources.FlavorResource, val in
 		deltaParentUsage := val - localAvailable
 		addUsage(node.parentHRN(), fr, deltaParentUsage)
 	}
+}
+
+// addUsage adds usage to the current node, and bubbles up usage to
+// its Cohort when usage exceeds guaranteedQuota.
+func addWallTimeUsage(node hierarchicalResourceNode, fr resources.FlavorWallTimeResource, val int32) {
+	r := node.getResourceNode()
+	r.WallTimeUsage[fr] += val
+	// TODO: figure out hiearchical cohorts for budgets
 }
 
 // removeUsage removes usage from the current node, and removes usage

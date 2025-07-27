@@ -21,36 +21,36 @@ import (
 	kueuev1beta1 "sigs.k8s.io/kueue/apis/kueue/v1beta1"
 )
 
-// BudgetQuotasApplyConfiguration represents a declarative configuration of the BudgetQuotas type for use
+// WallTimeFlavorUsageApplyConfiguration represents a declarative configuration of the WallTimeFlavorUsage type for use
 // with apply.
-type BudgetQuotasApplyConfiguration struct {
-	Name        *kueuev1beta1.ResourceFlavorReference `json:"name,omitempty"`
-	BudgetQuota []BudgetQuotaApplyConfiguration       `json:"budgetQuota,omitempty"`
+type WallTimeFlavorUsageApplyConfiguration struct {
+	Name          *kueuev1beta1.ResourceFlavorReference `json:"name,omitempty"`
+	WallTimeUsage []WallTimeUsageApplyConfiguration     `json:"wallTimeUsage,omitempty"`
 }
 
-// BudgetQuotasApplyConfiguration constructs a declarative configuration of the BudgetQuotas type for use with
+// WallTimeFlavorUsageApplyConfiguration constructs a declarative configuration of the WallTimeFlavorUsage type for use with
 // apply.
-func BudgetQuotas() *BudgetQuotasApplyConfiguration {
-	return &BudgetQuotasApplyConfiguration{}
+func WallTimeFlavorUsage() *WallTimeFlavorUsageApplyConfiguration {
+	return &WallTimeFlavorUsageApplyConfiguration{}
 }
 
 // WithName sets the Name field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Name field is set to the value of the last call.
-func (b *BudgetQuotasApplyConfiguration) WithName(value kueuev1beta1.ResourceFlavorReference) *BudgetQuotasApplyConfiguration {
+func (b *WallTimeFlavorUsageApplyConfiguration) WithName(value kueuev1beta1.ResourceFlavorReference) *WallTimeFlavorUsageApplyConfiguration {
 	b.Name = &value
 	return b
 }
 
-// WithBudgetQuota adds the given value to the BudgetQuota field in the declarative configuration
+// WithWallTimeUsage adds the given value to the WallTimeUsage field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the BudgetQuota field.
-func (b *BudgetQuotasApplyConfiguration) WithBudgetQuota(values ...*BudgetQuotaApplyConfiguration) *BudgetQuotasApplyConfiguration {
+// If called multiple times, values provided by each call will be appended to the WallTimeUsage field.
+func (b *WallTimeFlavorUsageApplyConfiguration) WithWallTimeUsage(values ...*WallTimeUsageApplyConfiguration) *WallTimeFlavorUsageApplyConfiguration {
 	for i := range values {
 		if values[i] == nil {
-			panic("nil value passed to WithBudgetQuota")
+			panic("nil value passed to WithWallTimeUsage")
 		}
-		b.BudgetQuota = append(b.BudgetQuota, *values[i])
+		b.WallTimeUsage = append(b.WallTimeUsage, *values[i])
 	}
 	return b
 }

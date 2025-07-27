@@ -21,36 +21,36 @@ import (
 	kueuev1beta1 "sigs.k8s.io/kueue/apis/kueue/v1beta1"
 )
 
-// BudgetFlavorUsageApplyConfiguration represents a declarative configuration of the BudgetFlavorUsage type for use
+// WallTimeGroupApplyConfiguration represents a declarative configuration of the WallTimeGroup type for use
 // with apply.
-type BudgetFlavorUsageApplyConfiguration struct {
-	Name      *kueuev1beta1.ResourceFlavorReference `json:"name,omitempty"`
-	Resources []BudgetUsageApplyConfiguration       `json:"budgetUsage,omitempty"`
+type WallTimeGroupApplyConfiguration struct {
+	Name           *kueuev1beta1.ResourceFlavorReference `json:"name,omitempty"`
+	WallTimeQuotas []WallTimeQuotaApplyConfiguration     `json:"wallTimeQuotas,omitempty"`
 }
 
-// BudgetFlavorUsageApplyConfiguration constructs a declarative configuration of the BudgetFlavorUsage type for use with
+// WallTimeGroupApplyConfiguration constructs a declarative configuration of the WallTimeGroup type for use with
 // apply.
-func BudgetFlavorUsage() *BudgetFlavorUsageApplyConfiguration {
-	return &BudgetFlavorUsageApplyConfiguration{}
+func WallTimeGroup() *WallTimeGroupApplyConfiguration {
+	return &WallTimeGroupApplyConfiguration{}
 }
 
 // WithName sets the Name field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Name field is set to the value of the last call.
-func (b *BudgetFlavorUsageApplyConfiguration) WithName(value kueuev1beta1.ResourceFlavorReference) *BudgetFlavorUsageApplyConfiguration {
+func (b *WallTimeGroupApplyConfiguration) WithName(value kueuev1beta1.ResourceFlavorReference) *WallTimeGroupApplyConfiguration {
 	b.Name = &value
 	return b
 }
 
-// WithResources adds the given value to the Resources field in the declarative configuration
+// WithWallTimeQuotas adds the given value to the WallTimeQuotas field in the declarative configuration
 // and returns the receiver, so that objects can be build by chaining "With" function invocations.
-// If called multiple times, values provided by each call will be appended to the Resources field.
-func (b *BudgetFlavorUsageApplyConfiguration) WithResources(values ...*BudgetUsageApplyConfiguration) *BudgetFlavorUsageApplyConfiguration {
+// If called multiple times, values provided by each call will be appended to the WallTimeQuotas field.
+func (b *WallTimeGroupApplyConfiguration) WithWallTimeQuotas(values ...*WallTimeQuotaApplyConfiguration) *WallTimeGroupApplyConfiguration {
 	for i := range values {
 		if values[i] == nil {
-			panic("nil value passed to WithResources")
+			panic("nil value passed to WithWallTimeQuotas")
 		}
-		b.Resources = append(b.Resources, *values[i])
+		b.WallTimeQuotas = append(b.WallTimeQuotas, *values[i])
 	}
 	return b
 }

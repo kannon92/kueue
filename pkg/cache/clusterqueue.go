@@ -70,7 +70,7 @@ type clusterQueue struct {
 	AllocatableResourceGeneration int64
 
 	AdmittedUsage resources.FlavorResourceQuantities
-	BudgetUsage   resources.FlavorBudgetQuantities
+	WallTimeUsage resources.FlavorWallTimeQuantities
 	// localQueues by (namespace/name).
 	localQueues                        map[queue.LocalQueueReference]*LocalQueue
 	podsReadyTracking                  bool
@@ -137,7 +137,7 @@ func (c *clusterQueue) updateClusterQueue(log logr.Logger, in *kueue.ClusterQueu
 		}
 	}
 
-	c.updateBudgetGroups(in.Spec.BudgetPolicy.BudgetGroup)
+	c.updateWallTimeGroups(in.Spec.WallTimePolicy.WallTimeGroup)
 
 	nsSelector, err := metav1.LabelSelectorAsSelector(in.Spec.NamespaceSelector)
 	if err != nil {
@@ -203,14 +203,14 @@ func (c *clusterQueue) updateQuotasAndResourceGroups(in []kueue.ResourceGroup) b
 		!equality.Semantic.DeepEqual(oldQuotas, c.resourceNode.Quotas)
 }
 
-func (c *clusterQueue) updateBudgetGroups(in []kueue.BudgetQuotas) bool {
+func (c *clusterQueue) updateWallTimeGroups(in []kueue.WallTimeGroup) bool {
 	oldBG := c.BudgetGroups
-	oldBQ := c.resourceNode.BudgetQuota
-	c.resourceNode.BudgetQuota = createBudgetResourceQuota(in)
+	oldBQ := c.resourceNode.WallTimeQuotas
+	c.resourceNode.WallTimeQuotas = createWallTimeResourceQuota(in)
 	// Start at 1, for backwards compatibility.
 	return c.AllocatableResourceGeneration == 0 ||
 		!equality.Semantic.DeepEqual(oldBG, c.BudgetGroups) ||
-		!equality.Semantic.DeepEqual(oldBQ, c.resourceNode.BudgetQuota)
+		!equality.Semantic.DeepEqual(oldBQ, c.resourceNode.WallTimeQuotas)
 
 }
 
@@ -250,14 +250,6 @@ func (c *clusterQueue) updateQueueStatus(log logr.Logger) {
 		c.Status = status
 		metrics.ReportClusterQueueStatus(c.Name, c.Status)
 	}
-}
-
-func (c *clusterQueue) computeBudgetUsage() []kueue.BudgetFlavorUsage {
-	ret := []kueue.BudgetFlavorUsage{}
-	for k, w := range c.Workloads {
-		flavorBudgetQuantity := w.BudgetFlavorUsage()
-	}
-	return ret
 }
 
 func (c *clusterQueue) isTASSynced() bool {
@@ -530,6 +522,15 @@ func (c *clusterQueue) updateWorkloadUsage(log logr.Logger, wi *workload.Info, o
 		}
 		if features.Enabled(features.LocalQueueMetrics) {
 			lq.reportActiveWorkloads()
+		}
+	}
+	wallTimeUsage := wi.WallTimeFlavorUsage()
+	for fr, q := range wallTimeUsage {
+		if op == add {
+			addWallTimeUsage(c, fr, q)
+		}
+		if op == subtract {
+			// todo: maybe we don't actually remove wall time usage
 		}
 	}
 }
