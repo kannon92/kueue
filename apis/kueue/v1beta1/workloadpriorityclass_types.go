@@ -31,17 +31,20 @@ import (
 type WorkloadPriorityClass struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the WorkloadPriorityClass.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// value represents the integer value of this workloadPriorityClass. This is the actual priority that workloads
 	// receive when jobs have the name of this class in their workloadPriorityClass label.
 	// Changing the value of workloadPriorityClass doesn't affect the priority of workloads that were already created.
+	// +required
 	Value int32 `json:"value"`
 
 	// description is an arbitrary string that usually provides guidelines on
 	// when this workloadPriorityClass should be used.
+	// +kubebuilder:validation:MinLength=1
 	// +optional
-	Description string `json:"description,omitempty"`
+	Description string `json:"description,omitempty,omitzero"`
 }
 
 // +kubebuilder:object:root=true

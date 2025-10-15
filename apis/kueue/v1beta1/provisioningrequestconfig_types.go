@@ -37,9 +37,9 @@ type ProvisioningRequestConfigSpec struct {
 	// provisioningClassName describes the different modes of provisioning the resources.
 	// Check autoscaling.x-k8s.io ProvisioningRequestSpec.ProvisioningClassName for details.
 	//
-	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +kubebuilder:validation:MaxLength=253
+	// +required
 	ProvisioningClassName string `json:"provisioningClassName"`
 
 	// parameters contains all other parameters classes may require.
@@ -164,10 +164,12 @@ type Parameter string
 type ProvisioningRequestConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard object metadata.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the ProvisioningRequestConfig.
-	Spec ProvisioningRequestConfigSpec `json:"spec,omitempty"`
+	// +required
+	Spec ProvisioningRequestConfigSpec `json:"spec"`
 }
 
 // +kubebuilder:object:root=true

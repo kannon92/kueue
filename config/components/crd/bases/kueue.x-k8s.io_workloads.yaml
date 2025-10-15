@@ -8728,7 +8728,6 @@ spec:
                           type: boolean
                       type: object
                   required:
-                  - count
                   - template
                   type: object
                   x-kubernetes-validations:
@@ -8951,8 +8950,6 @@ spec:
                           - domains
                           - levels
                           type: object
-                      required:
-                      - name
                       type: object
                     maxItems: 8
                     type: array
@@ -9334,6 +9331,8 @@ spec:
               rule: '!has(self.clusterName) || (!has(self.nominatedClusterNames) ||
                 (has(self.nominatedClusterNames) && size(self.nominatedClusterNames)
                 == 0))'
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: podSetAssignments must have the same number of podSets as the spec

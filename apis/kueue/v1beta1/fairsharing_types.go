@@ -41,6 +41,7 @@ type FairSharing struct {
 	// disadvantage against other ClusterQueues and Cohorts.
 	// When not 0, Weight must be greater than 10^-9.
 	// +kubebuilder:default=1
+	// +optional
 	Weight *resource.Quantity `json:"weight,omitempty"`
 }
 
@@ -53,19 +54,20 @@ type FairSharingStatus struct {
 	// the Node is below the nominal quota.  If the Node has a
 	// weight of zero and is borrowing, this will return
 	// 9223372036854775807, the maximum possible share value.
+	// +optional
 	WeightedShare int64 `json:"weightedShare"`
 
 	// admissionFairSharingStatus represents information relevant to the Admission Fair Sharing
 	// +optional
-	AdmissionFairSharingStatus *AdmissionFairSharingStatus `json:"admissionFairSharingStatus,omitempty"`
+	AdmissionFairSharingStatus *AdmissionFairSharingStatus `json:"admissionFairSharingStatus,omitempty,omitzero"`
 }
 
 type AdmissionFairSharingStatus struct {
 	// consumedResources represents the aggregated usage of resources over time,
 	// with decaying function applied.
 	// The value is populated if usage consumption functionality is enabled in Kueue config.
-	// +required
-	ConsumedResources corev1.ResourceList `json:"consumedResources"`
+	// +optional
+	ConsumedResources corev1.ResourceList `json:"consumedResources,omitempty"`
 
 	// lastUpdate is the time when share and consumed resources were updated.
 	// +required

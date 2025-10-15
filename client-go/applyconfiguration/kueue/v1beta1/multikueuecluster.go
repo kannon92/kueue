@@ -28,7 +28,6 @@ import (
 type MultiKueueClusterApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
 	*v1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
-	Spec                             *MultiKueueClusterSpecApplyConfiguration   `json:"spec,omitempty"`
 	Status                           *MultiKueueClusterStatusApplyConfiguration `json:"status,omitempty"`
 }
 
@@ -199,14 +198,6 @@ func (b *MultiKueueClusterApplyConfiguration) ensureObjectMetaApplyConfiguration
 	if b.ObjectMetaApplyConfiguration == nil {
 		b.ObjectMetaApplyConfiguration = &v1.ObjectMetaApplyConfiguration{}
 	}
-}
-
-// WithSpec sets the Spec field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Spec field is set to the value of the last call.
-func (b *MultiKueueClusterApplyConfiguration) WithSpec(value *MultiKueueClusterSpecApplyConfiguration) *MultiKueueClusterApplyConfiguration {
-	b.Spec = value
-	return b
 }
 
 // WithStatus sets the Status field in the declarative configuration to the given value

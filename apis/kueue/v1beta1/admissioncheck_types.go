@@ -48,8 +48,8 @@ const (
 type AdmissionCheckSpec struct {
 	// controllerName identifies the controller that processes the AdmissionCheck,
 	// not necessarily a Kubernetes Pod or Deployment name. Cannot be empty.
-	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="field is immutable"
+	// +required
 	ControllerName string `json:"controllerName"`
 
 	// retryDelayMinutes specifies how long to keep the workload suspended after
@@ -63,22 +63,28 @@ type AdmissionCheckSpec struct {
 	// parameters identifies a configuration with additional parameters for the
 	// check.
 	// +optional
-	Parameters *AdmissionCheckParametersReference `json:"parameters,omitempty"`
+	Parameters *AdmissionCheckParametersReference `json:"parameters,omitempty,omitzero"`
 }
 
 type AdmissionCheckParametersReference struct {
 	// apiGroup is the group for the resource being referenced.
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-	APIGroup string `json:"apiGroup"`
+	// +required
+	APIGroup string `json:"apiGroup,omitempty"`
 	// kind is the type of the resource being referenced.
 	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern="^(?i)[a-z]([-a-z0-9]*[a-z0-9])?$"
-	Kind string `json:"kind"`
+	// +required
+	Kind string `json:"kind,omitempty"`
 	// name is the name of the resource being referenced.
 	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern="^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
-	Name string `json:"name"`
+	// +required
+	Name string `json:"name,omitempty"`
 }
 
 // AdmissionCheckStatus defines the observed state of AdmissionCheck
@@ -110,12 +116,15 @@ const (
 type AdmissionCheck struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the AdmissionCheck.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the AdmissionCheck.
-	Spec AdmissionCheckSpec `json:"spec,omitempty"`
+	// +required
+	Spec AdmissionCheckSpec `json:"spec"`
 
 	// status is the status of the AdmissionCheck.
+	// +optional
 	Status AdmissionCheckStatus `json:"status,omitempty"`
 }
 

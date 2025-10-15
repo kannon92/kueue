@@ -32,6 +32,7 @@ type CohortSpec struct {
 	// Cohort, including ClusterQueues, until the cycle is
 	// removed.  We prevent further admission while the cycle
 	// exists.
+	// +optional
 	ParentName CohortReference `json:"parentName,omitempty"`
 
 	// resourceGroups describes groupings of Resources and
@@ -60,6 +61,7 @@ type CohortSpec struct {
 	//
 	//+listType=atomic
 	//+kubebuilder:validation:MaxItems=16
+	// +optional
 	ResourceGroups []ResourceGroup `json:"resourceGroups,omitempty"`
 
 	// fairSharing defines the properties of the Cohort when
@@ -92,11 +94,14 @@ type CohortStatus struct {
 type Cohort struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the Cohort.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the Cohort.
-	Spec CohortSpec `json:"spec,omitempty"`
+	// +required
+	Spec CohortSpec `json:"spec"`
 	// status is the status of the Cohort.
+	// +optional
 	Status CohortStatus `json:"status,omitempty"`
 }
 

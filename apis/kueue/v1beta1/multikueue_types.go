@@ -49,17 +49,20 @@ type KubeConfig struct {
 	//
 	// If LocationType is Secret then Location is the name of the secret inside the namespace in
 	// which the kueue controller manager is running. The config should be stored in the "kubeconfig" key.
+	// +optional
 	Location string `json:"location"`
 
 	// locationType of the KubeConfig.
 	//
 	// +kubebuilder:default=Secret
 	// +kubebuilder:validation:Enum=Secret;Path
+	// +optional
 	LocationType LocationType `json:"locationType"`
 }
 
 type MultiKueueClusterSpec struct {
 	// kubeConfig is information on how to connect to the cluster.
+	// +optional
 	KubeConfig KubeConfig `json:"kubeConfig"`
 }
 
@@ -87,12 +90,15 @@ type MultiKueueClusterStatus struct {
 type MultiKueueCluster struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the MultiKueueCluster.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the MultiKueueCluster.
-	Spec MultiKueueClusterSpec `json:"spec,omitempty"`
+	// +required
+	Spec MultiKueueClusterSpec `json:"spec`
 
 	// status is the status of the MultiKueueCluster.
+	// +optional
 	Status MultiKueueClusterStatus `json:"status,omitempty"`
 }
 
@@ -112,6 +118,7 @@ type MultiKueueConfigSpec struct {
 	// +listType=set
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=10
+	// +required
 	Clusters []string `json:"clusters"`
 }
 
@@ -125,9 +132,11 @@ type MultiKueueConfigSpec struct {
 type MultiKueueConfig struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the MultiKueueConfig.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the MultiKueueConfig.
+	// +optional
 	Spec MultiKueueConfigSpec `json:"spec,omitempty"`
 }
 

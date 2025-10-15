@@ -269,7 +269,6 @@ spec:
                         format: date-time
                         type: string
                     required:
-                    - consumedResources
                     - lastUpdate
                     type: object
                   weightedShare:
@@ -283,10 +282,10 @@ spec:
                       9223372036854775807, the maximum possible share value.
                     format: int64
                     type: integer
-                required:
-                - weightedShare
                 type: object
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

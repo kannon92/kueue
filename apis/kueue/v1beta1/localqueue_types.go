@@ -33,6 +33,7 @@ type LocalQueueName string
 type LocalQueueSpec struct {
 	// clusterQueue is a reference to a clusterQueue that backs this localQueue.
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="field is immutable"
+	// +optional
 	ClusterQueue ClusterQueueReference `json:"clusterQueue,omitempty"`
 
 	// stopPolicy - if set to a value different from None, the LocalQueue is considered Inactive,
@@ -59,7 +60,6 @@ type LocalQueueSpec struct {
 type LocalQueueFlavorStatus struct {
 	// name of the flavor.
 	// +required
-	// +kubebuilder:validation:Required
 	Name ResourceFlavorReference `json:"name"`
 
 	// resources used in the flavor.
@@ -95,14 +95,12 @@ type TopologyInfo struct {
 	// name is the name of the topology.
 	//
 	// +required
-	// +kubebuilder:validation:Required
 	Name TopologyReference `json:"name"`
 
 	// levels define the levels of topology.
 	//
 	// +required
 	// +listType=atomic
-	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
 	Levels []string `json:"levels"`
@@ -169,20 +167,24 @@ const (
 
 type LocalQueueFlavorUsage struct {
 	// name of the flavor.
+	// +required
 	Name ResourceFlavorReference `json:"name"`
 
 	// resources lists the quota usage for the resources in this flavor.
 	// +listType=map
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=16
+	// +required
 	Resources []LocalQueueResourceUsage `json:"resources"`
 }
 
 type LocalQueueResourceUsage struct {
 	// name of the resource.
+	// +required
 	Name corev1.ResourceName `json:"name"`
 
 	// total is the total quantity of used quota.
+	// +optional
 	Total resource.Quantity `json:"total,omitempty"`
 }
 
@@ -199,11 +201,14 @@ type LocalQueueResourceUsage struct {
 type LocalQueue struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the LocalQueue.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the LocalQueue.
-	Spec LocalQueueSpec `json:"spec,omitempty"`
+	// +required
+	Spec LocalQueueSpec `json:"spec"`
 	// status is the status of the LocalQueue.
+	// +optional
 	Status LocalQueueStatus `json:"status,omitempty"`
 }
 

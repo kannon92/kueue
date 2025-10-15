@@ -62,6 +62,7 @@ type ClusterQueueSpec struct {
 	// resourceGroups can be up to 16, with a max of 256 total flavors across all groups.
 	// +listType=atomic
 	// +kubebuilder:validation:MaxItems=16
+	// +optional
 	ResourceGroups []ResourceGroup `json:"resourceGroups,omitempty"`
 
 	// cohort that this ClusterQueue belongs to. CQs that belong to the
@@ -76,6 +77,7 @@ type ClusterQueueSpec struct {
 	//
 	// A cohort is a name that links CQs together, but it doesn't reference any
 	// object.
+	// +optional
 	Cohort CohortReference `json:"cohort,omitempty"`
 
 	// queueingStrategy indicates the queueing strategy of the workloads
@@ -91,6 +93,7 @@ type ClusterQueueSpec struct {
 	//
 	// +kubebuilder:default=BestEffortFIFO
 	// +kubebuilder:validation:Enum=StrictFIFO;BestEffortFIFO
+	// +optional
 	QueueingStrategy QueueingStrategy `json:"queueingStrategy,omitempty"`
 
 	// namespaceSelector defines which namespaces are allowed to submit workloads to
@@ -98,15 +101,18 @@ type ClusterQueueSpec struct {
 	// Gatekeeper should be used to enforce more advanced policies.
 	// Defaults to null which is a nothing selector (no namespaces eligible).
 	// If set to an empty selector `{}`, then all namespaces are eligible.
+	// +optional
 	NamespaceSelector *metav1.LabelSelector `json:"namespaceSelector,omitempty"`
 
 	// flavorFungibility defines whether a workload should try the next flavor
 	// before borrowing or preempting in the flavor being evaluated.
 	// +kubebuilder:default={}
+	// +optional
 	FlavorFungibility *FlavorFungibility `json:"flavorFungibility,omitempty"`
 
 	// preemption defines the preemption policies.
 	// +kubebuilder:default={}
+	// +optional
 	Preemption *ClusterQueuePreemption `json:"preemption,omitempty"`
 
 	// admissionChecks lists the AdmissionChecks required by this ClusterQueue.
@@ -147,12 +153,14 @@ type ClusterQueueSpec struct {
 // AdmissionChecksStrategy defines a strategy for a AdmissionCheck.
 type AdmissionChecksStrategy struct {
 	// admissionChecks is a list of strategies for AdmissionChecks
+	// +optional
 	AdmissionChecks []AdmissionCheckStrategyRule `json:"admissionChecks,omitempty"`
 }
 
 // AdmissionCheckStrategyRule defines rules for a single AdmissionCheck
 type AdmissionCheckStrategyRule struct {
 	// name is an AdmissionCheck's name.
+	// +required
 	Name AdmissionCheckReference `json:"name"`
 
 	// onFlavors is a list of ResourceFlavors' names that this AdmissionCheck should run for.
@@ -184,6 +192,7 @@ type ResourceGroup struct {
 	// of up to 256 covered resources across all resource groups in the ClusterQueue.
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
+	// +required
 	CoveredResources []corev1.ResourceName `json:"coveredResources"`
 
 	// flavors is the list of flavors that provide the resources of this group.
@@ -198,6 +207,7 @@ type ResourceGroup struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
+	// +required
 	Flavors []FlavorQuotas `json:"flavors"`
 }
 
@@ -205,6 +215,7 @@ type FlavorQuotas struct {
 	// name of this flavor. The name should match the .metadata.name of a
 	// ResourceFlavor. If a matching ResourceFlavor does not exist, the
 	// ClusterQueue will have an Active condition set to False.
+	// +required
 	Name ResourceFlavorReference `json:"name"`
 
 	// resources is the list of quotas for this flavor per resource.
@@ -213,11 +224,13 @@ type FlavorQuotas struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
+	// +required
 	Resources []ResourceQuota `json:"resources"`
 }
 
 type ResourceQuota struct {
 	// name of this resource.
+	// +required
 	Name corev1.ResourceName `json:"name"`
 
 	// nominalQuota is the quantity of this resource that is available for
@@ -232,6 +245,7 @@ type ResourceQuota struct {
 	// If the ClusterQueue belongs to a cohort, the sum of the quotas for each
 	// (flavor, resource) combination defines the maximum quantity that can be
 	// allocated by a ClusterQueue in the cohort.
+	// +required
 	NominalQuota resource.Quantity `json:"nominalQuota"`
 
 	// borrowingLimit is the maximum amount of quota for the [flavor, resource]
@@ -324,10 +338,11 @@ type ClusterQueueStatus struct {
 type ClusterQueuePendingWorkloadsStatus struct {
 	// clusterQueuePendingWorkload contains the list of top pending workloads.
 	// +listType=atomic
-	// +optional
+	// +required
 	Head []ClusterQueuePendingWorkload `json:"clusterQueuePendingWorkload"`
 
 	// lastChangeTime indicates the time of the last change of the structure.
+	// +required
 	LastChangeTime metav1.Time `json:"lastChangeTime"`
 }
 
@@ -335,33 +350,40 @@ type ClusterQueuePendingWorkloadsStatus struct {
 // in the cluster queue.
 type ClusterQueuePendingWorkload struct {
 	// name indicates the name of the pending workload.
+	// +required
 	Name string `json:"name"`
 
 	// namespace indicates the name of the pending workload.
+	// +required
 	Namespace string `json:"namespace"`
 }
 
 type FlavorUsage struct {
 	// name of the flavor.
+	// +required
 	Name ResourceFlavorReference `json:"name"`
 
 	// resources lists the quota usage for the resources in this flavor.
 	// +listType=map
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=64
+	// +required
 	Resources []ResourceUsage `json:"resources"`
 }
 
 type ResourceUsage struct {
 	// name of the resource
+	// +required
 	Name corev1.ResourceName `json:"name"`
 
 	// total is the total quantity of used quota, including the amount borrowed
 	// from the cohort.
+	// +optional
 	Total resource.Quantity `json:"total,omitempty"`
 
 	// borrowed is quantity of quota that is borrowed from the cohort. In other
 	// words, it's the used quota that is over the nominalQuota.
+	// +optional
 	Borrowed resource.Quantity `json:"borrowed,omitempty"`
 }
 
@@ -402,6 +424,7 @@ type FlavorFungibility struct {
 	//
 	// +kubebuilder:validation:Enum={MayStopSearch,TryNextFlavor,Borrow}
 	// +kubebuilder:default="MayStopSearch"
+	// +optional
 	WhenCanBorrow FlavorFungibilityPolicy `json:"whenCanBorrow,omitempty"`
 	// whenCanPreempt determines whether a workload should try the next flavor
 	// before borrowing in current flavor. The possible values are:
@@ -414,6 +437,7 @@ type FlavorFungibility struct {
 	//
 	// +kubebuilder:validation:Enum={MayStopSearch,TryNextFlavor,Preempt}
 	// +kubebuilder:default="TryNextFlavor"
+	// +optional
 	WhenCanPreempt FlavorFungibilityPolicy `json:"whenCanPreempt,omitempty"`
 }
 
@@ -457,12 +481,14 @@ type ClusterQueuePreemption struct {
 	//
 	// +kubebuilder:default=Never
 	// +kubebuilder:validation:Enum=Never;LowerPriority;Any
+	// +optional
 	ReclaimWithinCohort PreemptionPolicy `json:"reclaimWithinCohort,omitempty"`
 
 	// borrowWithinCohort determines whether a pending Workload can preempt
 	// Workloads from other ClusterQueues in the cohort if the workload requires borrowing.
 	// May only be configured with Classical Preemption, and __not__ with Fair Sharing.
 	// +kubebuilder:default={}
+	// +optional
 	BorrowWithinCohort *BorrowWithinCohort `json:"borrowWithinCohort,omitempty"`
 
 	// withinClusterQueue determines whether a pending Workload that doesn't fit
@@ -478,6 +504,7 @@ type ClusterQueuePreemption struct {
 	//
 	// +kubebuilder:default=Never
 	// +kubebuilder:validation:Enum=Never;LowerPriority;LowerOrNewerEqualPriority
+	// +optional
 	WithinClusterQueue PreemptionPolicy `json:"withinClusterQueue,omitempty"`
 }
 
@@ -502,6 +529,7 @@ type BorrowWithinCohort struct {
 	//
 	// +kubebuilder:default=Never
 	// +kubebuilder:validation:Enum=Never;LowerPriority
+	// +optional
 	Policy BorrowWithinCohortPolicy `json:"policy,omitempty"`
 
 	// maxPriorityThreshold allows to restrict the set of workloads which
@@ -529,11 +557,14 @@ type BorrowWithinCohort struct {
 type ClusterQueue struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the metadata of the ClusterQueue.
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the specification of the ClusterQueue.
-	Spec ClusterQueueSpec `json:"spec,omitempty"`
+	// +required
+	Spec ClusterQueueSpec `json:"spec"`
 	// status is the status of the ClusterQueue.
+	// +optional
 	Status ClusterQueueStatus `json:"status,omitempty"`
 }
 
