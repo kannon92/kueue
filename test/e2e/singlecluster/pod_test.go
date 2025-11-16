@@ -85,7 +85,7 @@ var _ = ginkgo.Describe("Pod groups", func() {
 			group := podtesting.MakePod("group", ns.Name).
 				Image(util.GetAgnHostImage(), util.BehaviorExitFast).
 				Queue(lq.Name).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				MakeGroup(2)
 			gKey := client.ObjectKey{Namespace: ns.Name, Name: "group"}
 			for _, p := range group {
@@ -128,7 +128,7 @@ var _ = ginkgo.Describe("Pod groups", func() {
 			group := podtesting.MakePod("group", ns.Name).
 				Image(util.GetAgnHostImage(), util.BehaviorExitFast).
 				Queue(lq.Name).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				MakeGroup(3)
 
 			ginkgo.By("Incomplete group should not start", func() {
@@ -180,7 +180,7 @@ var _ = ginkgo.Describe("Pod groups", func() {
 				Image(util.GetAgnHostImage(), util.BehaviorExitFast).
 				TerminationGracePeriod(1).
 				Queue(lq.Name).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				MakeGroup(3)
 
 			// First pod runs for much longer, so that there is time to terminate it.
@@ -294,7 +294,7 @@ var _ = ginkgo.Describe("Pod groups", func() {
 			group := podtesting.MakePod("group", ns.Name).
 				Image(util.GetAgnHostImage(), util.BehaviorExitFast).
 				Queue(lq.Name).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				MakeGroup(2)
 
 			// The first pod has a node selector for a missing node.
@@ -448,7 +448,7 @@ var _ = ginkgo.Describe("Pod groups", func() {
 				Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
 				Queue(lq.Name).
 				PriorityClass("high").
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				TerminationGracePeriod(1).
 				MakeGroup(2)
 			highGroupKey := client.ObjectKey{Namespace: ns.Name, Name: "high-priority-group"}
@@ -558,7 +558,7 @@ var _ = ginkgo.Describe("Pod groups", func() {
 			ginkgo.By("creating a pod", func() {
 				p := podtesting.MakePod("pod-0", ns.Name).
 					Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					Label("app-role", "worker").
 					Annotation(podconstants.SuspendedByParentAnnotation, "OtherController").
 					KueueSchedulingGate().

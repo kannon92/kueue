@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 				blockingJob = testingjob.MakeJob("test-job-1", nsA.Name).
 					Queue(kueue.LocalQueueName(localQueueA.Name)).
 					Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					TerminationGracePeriod(1).
 					BackoffLimit(0).
 					PriorityClass(highPriorityClass.Name).
@@ -145,7 +145,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 				sampleJob2 = testingjob.MakeJob("test-job-2", nsA.Name).
 					Queue(kueue.LocalQueueName(localQueueA.Name)).
 					Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					PriorityClass(lowPriorityClass.Name).
 					Obj()
 				util.MustCreate(ctx, k8sClient, sampleJob2)
@@ -191,7 +191,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 				sampleJob2 = testingjob.MakeJob("test-job-2", nsA.Name).
 					Queue(kueue.LocalQueueName(localQueueA.Name)).
 					Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					PriorityClass(lowPriorityClass.Name).
 					Obj()
 				util.MustCreate(ctx, k8sClient, sampleJob2)
@@ -253,7 +253,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 					job := testingjob.MakeJob(jobCase.JobName, nsA.Name).
 						Queue(kueue.LocalQueueName(jobCase.LocalQueueName)).
 						Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-						RequestAndLimit(corev1.ResourceCPU, "1").
+						RequestAndLimit(corev1.ResourceCPU, "200Mi").
 						PriorityClass(jobCase.JobPrioClassName).
 						Obj()
 					util.MustCreate(ctx, k8sClient, job)
@@ -312,7 +312,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 				sampleJob2 = testingjob.MakeJob("test-job-2", nsA.Name).
 					Queue(kueue.LocalQueueName(localQueueA.Name)).
 					Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					PriorityClass(lowPriorityClass.Name).
 					Obj()
 				util.MustCreate(ctx, k8sClient, sampleJob2)
@@ -374,7 +374,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 					job := testingjob.MakeJob(jobCase.JobName, nsA.Name).
 						Queue(kueue.LocalQueueName(jobCase.LocalQueueName)).
 						Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-						RequestAndLimit(corev1.ResourceCPU, "1").
+						RequestAndLimit(corev1.ResourceCPU, "200Mi").
 						PriorityClass(jobCase.JobPrioClassName).
 						Obj()
 					util.MustCreate(ctx, k8sClient, job)
@@ -467,7 +467,7 @@ var _ = ginkgo.Describe("Kueue visibility server", func() {
 					job := testingjob.MakeJob(jobCase.JobName, jobCase.nsName).
 						Queue(kueue.LocalQueueName(jobCase.LocalQueueName)).
 						Image(util.GetAgnHostImage(), util.BehaviorExitFast).
-						RequestAndLimit(corev1.ResourceCPU, "1").
+						RequestAndLimit(corev1.ResourceCPU, "200Mi").
 						PriorityClass(jobCase.JobPrioClassName).
 						Obj()
 					util.MustCreate(ctx, k8sClient, job)

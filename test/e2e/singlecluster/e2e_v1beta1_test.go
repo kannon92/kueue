@@ -43,7 +43,7 @@ var _ = ginkgo.Describe("Kueue v1beta2", func() {
 		sampleJob = testingjob.MakeJob("test-job", ns.Name).
 			Queue("main").
 			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
-			RequestAndLimit(corev1.ResourceCPU, "1").
+			RequestAndLimit(corev1.ResourceCPU, "200Mi").
 			RequestAndLimit(corev1.ResourceMemory, "20Mi").
 			Obj()
 		jobKey = client.ObjectKeyFromObject(sampleJob)

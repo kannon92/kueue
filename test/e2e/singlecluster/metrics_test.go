@@ -129,7 +129,7 @@ var _ = ginkgo.Describe("Metrics", func() {
 				PodSets(
 					*utiltestingapi.MakePodSet("ps1", 1).Obj(),
 				).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				Obj()
 			util.MustCreate(ctx, k8sClient, workload)
 		})
@@ -262,7 +262,7 @@ var _ = ginkgo.Describe("Metrics", func() {
 			createdJob = testingjob.MakeJob("admission-checked-job", ns.Name).
 				Queue(kueue.LocalQueueName(localQueue.Name)).
 				Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				Obj()
 			util.MustCreate(ctx, k8sClient, createdJob)
 
@@ -406,7 +406,7 @@ var _ = ginkgo.Describe("Metrics", func() {
 			lowerJob1 = testingjob.MakeJob("lower-job-1", ns.Name).
 				Queue(kueue.LocalQueueName(localQueue1.Name)).
 				Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				Obj()
 			util.MustCreate(ctx, k8sClient, lowerJob1)
 
@@ -426,7 +426,7 @@ var _ = ginkgo.Describe("Metrics", func() {
 			lowerJob2 = testingjob.MakeJob("lower-job-2", ns.Name).
 				Queue(kueue.LocalQueueName(localQueue2.Name)).
 				Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
-				RequestAndLimit(corev1.ResourceCPU, "1").
+				RequestAndLimit(corev1.ResourceCPU, "200Mi").
 				Obj()
 			util.MustCreate(ctx, k8sClient, lowerJob2)
 

@@ -51,7 +51,7 @@ var _ = ginkgo.Describe("Kueue", func() {
 		sampleJob = testingjob.MakeJob("test-job", ns.Name).
 			Queue("main").
 			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
-			RequestAndLimit(corev1.ResourceCPU, "1").
+			RequestAndLimit(corev1.ResourceCPU, "200Mi").
 			RequestAndLimit(corev1.ResourceMemory, "20Mi").
 			Obj()
 		jobKey = client.ObjectKeyFromObject(sampleJob)
@@ -303,7 +303,7 @@ var _ = ginkgo.Describe("Kueue", func() {
 					Queue("main").
 					Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
 					PriorityClass("high").
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					NodeSelector("instance-type", "on-demand"). // target the same flavor to cause preemption
 					Obj()
 				util.MustCreate(ctx, k8sClient, job)
@@ -340,7 +340,7 @@ var _ = ginkgo.Describe("Kueue", func() {
 					Queue("main").
 					Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
 					WorkloadPriorityClass("high-workload").
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					NodeSelector("instance-type", "on-demand"). // target the same flavor to cause preemption
 					Obj()
 				util.MustCreate(ctx, k8sClient, job)
@@ -445,7 +445,7 @@ var _ = ginkgo.Describe("Kueue", func() {
 			ginkgo.By("Create job-two with low priority", func() {
 				sampleJob2 = testingjob.MakeJob("test-job-2", ns.Name).
 					Queue("main").
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					RequestAndLimit(corev1.ResourceMemory, "20Mi").
 					WorkloadPriorityClass(lowPriority).
 					Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).

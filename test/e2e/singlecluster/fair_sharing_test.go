@@ -99,7 +99,7 @@ var _ = ginkgo.Describe("Fair Sharing", ginkgo.Ordered, ginkgo.ContinueOnFailure
 					Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
 					Parallelism(3).
 					Completions(3).
-					RequestAndLimit(corev1.ResourceCPU, "1").
+					RequestAndLimit(corev1.ResourceCPU, "200Mi").
 					RequestAndLimit(corev1.ResourceMemory, "200Mi").
 					Obj()
 				util.MustCreate(ctx, k8sClient, job)
