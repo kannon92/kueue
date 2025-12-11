@@ -144,6 +144,11 @@ type ControllerManager struct {
 	// registered within this manager.
 	// +optional
 	Controller *ControllerConfigurationSpec `json:"controller,omitempty"`
+
+	// TLS contains TLS security settings for all Kueue API servers
+	// (webhooks, metrics, and visibility).
+	// +optional
+	TLS *TLSOptions `json:"tls,omitempty"`
 }
 
 // ControllerWebhook defines the webhook server for the controller.
@@ -377,6 +382,29 @@ type InternalCertManagement struct {
 	// WebhookSecretName is the name of the Secret used to store CA and server certs.
 	// Defaults to kueue-webhook-server-cert.
 	WebhookSecretName *string `json:"webhookSecretName,omitempty"`
+}
+
+// TLSOptions defines TLS security settings for Kueue servers
+type TLSOptions struct {
+	// MinTLSVersion specifies the minimum TLS version that is acceptable.
+	// Valid values are: "1.2", "1.3"
+	// If not specified, defaults to "1.2" for backward compatibility.
+	// +optional
+	MinTLSVersion string `json:"minTLSVersion,omitempty"`
+
+	// CipherSuites specifies the list of enabled TLS cipher suites.
+	// If not specified, a secure default list will be used.
+	// The available cipher suites are defined in Go's crypto/tls package.
+	// See https://golang.org/pkg/crypto/tls/#pkg-constants for valid values.
+	// +optional
+	CipherSuites []string `json:"cipherSuites,omitempty"`
+
+	// CurvePreferences specifies the elliptic curves that will be used in
+	// an ECDHE handshake, in preference order.
+	// If not specified, a default set of curves will be used.
+	// Valid values include: "CurveP256", "CurveP384", "CurveP521", "X25519"
+	// +optional
+	CurvePreferences []string `json:"curvePreferences,omitempty"`
 }
 
 type ClientConnection struct {

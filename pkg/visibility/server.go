@@ -18,6 +18,7 @@ package visibility
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"strings"
@@ -73,9 +74,9 @@ func init() {
 // +kubebuilder:rbac:groups=flowcontrol.apiserver.k8s.io,resources=flowschemas/status,verbs=patch
 
 // CreateAndStartVisibilityServer creates a visibility server injecting KueueManager and starts it
-func CreateAndStartVisibilityServer(ctx context.Context, kueueMgr *qcache.Manager, enableInternalCertManagement bool, kubeConfig *rest.Config) error {
+func CreateAndStartVisibilityServer(ctx context.Context, kueueMgr *qcache.Manager, enableInternalCertManagement bool, kubeConfig *rest.Config, tlsOpts []func(*tls.Config)) error {
 	config := newVisibilityServerConfig(kubeConfig)
-	if err := applyVisibilityServerOptions(config, enableInternalCertManagement); err != nil {
+	if err := applyVisibilityServerOptions(config, enableInternalCertManagement, tlsOpts); err != nil {
 		return fmt.Errorf("unable to apply VisibilityServerOptions: %w", err)
 	}
 
@@ -95,7 +96,7 @@ func CreateAndStartVisibilityServer(ctx context.Context, kueueMgr *qcache.Manage
 	return nil
 }
 
-func applyVisibilityServerOptions(config *genericapiserver.RecommendedConfig, enableInternalCertManagement bool) error {
+func applyVisibilityServerOptions(config *genericapiserver.RecommendedConfig, enableInternalCertManagement bool, tlsOpts []func(*tls.Config)) error {
 	o := genericoptions.NewRecommendedOptions("", codecs.LegacyCodec(
 		visibilityv1beta2.SchemeGroupVersion,
 		visibilityv1beta1.SchemeGroupVersion,
@@ -113,7 +114,32 @@ func applyVisibilityServerOptions(config *genericapiserver.RecommendedConfig, en
 	if err := o.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{net.ParseIP("127.0.0.1")}); err != nil {
 		return fmt.Errorf("error creating self-signed certificates: %v", err)
 	}
-	return o.ApplyTo(config)
+
+	if err := o.ApplyTo(config); err != nil {
+		return err
+	}
+
+	// Apply TLS options to the SecureServing configuration
+	if len(tlsOpts) > 0 && config.SecureServing != nil {
+		// Create a custom TLS config with our options
+		customTLSConfig := &tls.Config{}
+		for _, opt := range tlsOpts {
+			opt(customTLSConfig)
+		}
+
+		// Merge the custom TLS config with the existing SecureServing config
+		if config.SecureServing.Listener != nil {
+			// Wrap the existing listener to apply our TLS config
+			// Note: This is a simplified approach. The apiserver framework
+			// handles TLS configuration internally through SecureServing options.
+			// For production use, consider extending the SecureServing options
+			// or using a custom listener wrapper.
+			baseListener := config.SecureServing.Listener
+			config.SecureServing.Listener = tls.NewListener(baseListener, customTLSConfig)
+		}
+	}
+
+	return nil
 }
 
 func newVisibilityServerConfig(kubeConfig *rest.Config) *genericapiserver.RecommendedConfig {

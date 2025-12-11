@@ -258,6 +258,14 @@ before exposing it to public.</p>
 registered within this manager.</p>
 </td>
 </tr>
+<tr><td><code>tls</code><br/>
+<a href="#config-kueue-x-k8s-io-v1beta1-TLSOptions"><code>TLSOptions</code></a>
+</td>
+<td>
+   <p>TLS contains TLS security settings for all Kueue API servers
+(webhooks, metrics, and visibility).</p>
+</td>
+</tr>
 </tbody>
 </table>
 
@@ -918,6 +926,54 @@ This is intended to be a map with Input as the key (enforced by validation code)
 <td>
    <p>DeviceClassMappings defines mappings from device classes to logical resources
 for Dynamic Resource Allocation support.</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `TLSOptions`     {#config-kueue-x-k8s-io-v1beta1-TLSOptions}
+    
+
+**Appears in:**
+
+- [ControllerManager](#config-kueue-x-k8s-io-v1beta1-ControllerManager)
+
+
+<p>TLSOptions defines TLS security settings for Kueue servers</p>
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>minTLSVersion</code><br/>
+<code>string</code>
+</td>
+<td>
+   <p>MinTLSVersion specifies the minimum TLS version that is acceptable.
+Valid values are: &quot;1.2&quot;, &quot;1.3&quot;
+If not specified, defaults to &quot;1.2&quot; for backward compatibility.</p>
+</td>
+</tr>
+<tr><td><code>cipherSuites</code><br/>
+<code>[]string</code>
+</td>
+<td>
+   <p>CipherSuites specifies the list of enabled TLS cipher suites.
+If not specified, a secure default list will be used.
+The available cipher suites are defined in Go's crypto/tls package.
+See https://golang.org/pkg/crypto/tls/#pkg-constants for valid values.</p>
+</td>
+</tr>
+<tr><td><code>curvePreferences</code><br/>
+<code>[]string</code>
+</td>
+<td>
+   <p>CurvePreferences specifies the elliptic curves that will be used in
+an ECDHE handshake, in preference order.
+If not specified, a default set of curves will be used.
+Valid values include: &quot;CurveP256&quot;, &quot;CurveP384&quot;, &quot;CurveP521&quot;, &quot;X25519&quot;</p>
 </td>
 </tr>
 </tbody>
