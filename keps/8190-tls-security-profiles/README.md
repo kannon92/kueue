@@ -152,15 +152,11 @@ const (
 )
 
 // CipherSuite represents a TLS cipher suite name
-// +kubebuilder:validation:Enum=TLS_RSA_WITH_AES_128_CBC_SHA;TLS_RSA_WITH_AES_256_CBC_SHA;TLS_RSA_WITH_AES_128_GCM_SHA256;TLS_RSA_WITH_AES_256_GCM_SHA384;TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA;TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA;TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA;TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA;TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384;TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256;TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384;TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256;TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256;TLS_AES_128_GCM_SHA256;TLS_AES_256_GCM_SHA384;TLS_CHACHA20_POLY1305_SHA256
+// +kubebuilder:validation:Enum=TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA;TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA;TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA;TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA;TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256;TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384;TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256;TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384;TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256;TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256;TLS_AES_128_GCM_SHA256;TLS_AES_256_GCM_SHA384;TLS_CHACHA20_POLY1305_SHA256
 type CipherSuite string
 
 const (
 	// TLS 1.2 cipher suites
-	CipherSuiteTLSRSAWithAES128CBCSHA                  CipherSuite = "TLS_RSA_WITH_AES_128_CBC_SHA"
-	CipherSuiteTLSRSAWithAES256CBCSHA                  CipherSuite = "TLS_RSA_WITH_AES_256_CBC_SHA"
-	CipherSuiteTLSRSAWithAES128GCMSHA256               CipherSuite = "TLS_RSA_WITH_AES_128_GCM_SHA256"
-	CipherSuiteTLSRSAWithAES256GCMSHA384               CipherSuite = "TLS_RSA_WITH_AES_256_GCM_SHA384"
 	CipherSuiteTLSECDHEECDSAWithAES128CBCSHA           CipherSuite = "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA"
 	CipherSuiteTLSECDHEECDSAWithAES256CBCSHA           CipherSuite = "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA"
 	CipherSuiteTLSECDHERSAWithAES128CBCSHA             CipherSuite = "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"
@@ -204,6 +200,9 @@ type Configuration struct {
 }
 ```
 
+We will take only the "secure" TLS options according to golang.
+The list is taken from [golang](https://cs.opensource.google/go/go/+/refs/tags/go1.25.5:src/crypto/tls/cipher_suites.go;l=56).
+
 ### Supported Servers
 
 The TLS configuration will be applied to the following Kueue servers:
@@ -229,7 +228,7 @@ To maintain backward compatibility and provide secure defaults:
     - CipherSuiteTLSECDHEECDSAWithAES128GCMSHA256
     - CipherSuiteTLSECDHEECDSAWithAES256GCMSHA384
   - For TLS 1.3, cipher suites are not configurable (Go uses the built-in secure set)
-  - All available cipher suite enums are defined in the configuration_types.go file
+  - All secure cipher suite enums are defined in the configuration_types.go file
 
 ### Implementation Approach
 
