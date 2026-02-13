@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta2"
-	utiltestingapi "sigs.k8s.io/kueue/pkg/util/testing/v1beta2"
+	utiltestingapi "sigs.k8s.io/kueue/pkg/util/kueuetesting/v1beta2"
 )
 
 func TestValidateResourceFlavor(t *testing.T) {

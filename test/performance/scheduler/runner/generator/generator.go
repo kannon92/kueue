@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta2"
-	utiltestingapi "sigs.k8s.io/kueue/pkg/util/testing/v1beta2"
+	utiltestingapi "sigs.k8s.io/kueue/pkg/util/kueuetesting/v1beta2"
 )
 
 const (

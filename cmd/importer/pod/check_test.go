@@ -25,8 +25,8 @@ import (
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta2"
 	"sigs.k8s.io/kueue/cmd/importer/util"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
-	utiltestingapi "sigs.k8s.io/kueue/pkg/util/testing/v1beta2"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
+	utiltestingapi "sigs.k8s.io/kueue/pkg/util/kueuetesting/v1beta2"
 	testingpod "sigs.k8s.io/kueue/pkg/util/testingjobs/pod"
 )
 

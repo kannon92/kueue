@@ -37,8 +37,8 @@ import (
 	"sigs.k8s.io/kueue/pkg/controller/jobframework"
 	podconstants "sigs.k8s.io/kueue/pkg/controller/jobs/pod/constants"
 	"sigs.k8s.io/kueue/pkg/features"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
-	utiltestingapi "sigs.k8s.io/kueue/pkg/util/testing/v1beta2"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
+	utiltestingapi "sigs.k8s.io/kueue/pkg/util/kueuetesting/v1beta2"
 	"sigs.k8s.io/kueue/pkg/util/testingjobs/leaderworkerset"
 )
 

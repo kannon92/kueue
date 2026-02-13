@@ -23,8 +23,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta2"
+	"sigs.k8s.io/kueue/pkg/util/kueuetesting/metrics"
 	"sigs.k8s.io/kueue/pkg/util/roletracker"
-	"sigs.k8s.io/kueue/pkg/util/testing/metrics"
 	"sigs.k8s.io/kueue/pkg/version"
 )
 

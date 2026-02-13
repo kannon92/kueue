@@ -51,7 +51,7 @@ import (
 	configapi "sigs.k8s.io/kueue/apis/config/v1beta2"
 	"sigs.k8s.io/kueue/pkg/controller/jobs/job"
 	"sigs.k8s.io/kueue/pkg/features"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 	"sigs.k8s.io/kueue/pkg/util/waitforpodsready"
 
 	_ "sigs.k8s.io/kueue/pkg/controller/jobs"

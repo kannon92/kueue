@@ -26,7 +26,7 @@ import (
 	"k8s.io/utils/clock"
 	"k8s.io/utils/ptr"
 
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 )
 
 type SpyTimer struct {

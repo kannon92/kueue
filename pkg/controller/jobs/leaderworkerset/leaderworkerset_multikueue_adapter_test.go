@@ -30,8 +30,8 @@ import (
 
 	kueue "sigs.k8s.io/kueue/apis/kueue/v1beta2"
 	"sigs.k8s.io/kueue/pkg/controller/jobframework"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 	"sigs.k8s.io/kueue/pkg/util/slices"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
 	utiltestingleaderworkerset "sigs.k8s.io/kueue/pkg/util/testingjobs/leaderworkerset"
 )
 

@@ -28,7 +28,7 @@ import (
 	jobsetutil "sigs.k8s.io/jobset/pkg/util/testing"
 
 	"sigs.k8s.io/kueue/pkg/controller/constants"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 )
 
 // JobSetWrapper wraps a JobSet.

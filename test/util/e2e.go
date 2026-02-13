@@ -65,7 +65,7 @@ import (
 	visibility "sigs.k8s.io/kueue/apis/visibility/v1beta2"
 	kueueclientset "sigs.k8s.io/kueue/client-go/clientset/versioned"
 	visibilityv1beta2 "sigs.k8s.io/kueue/client-go/clientset/versioned/typed/visibility/v1beta2"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 )
 
 const (

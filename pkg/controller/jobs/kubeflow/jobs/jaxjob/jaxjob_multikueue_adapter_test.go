@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/kueue/pkg/controller/constants"
 	"sigs.k8s.io/kueue/pkg/controller/jobframework"
 	"sigs.k8s.io/kueue/pkg/controller/jobs/kubeflow/kubeflowjob"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 	"sigs.k8s.io/kueue/pkg/util/slices"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
 	kfutiltesting "sigs.k8s.io/kueue/pkg/util/testingjobs/jaxjob"
 )
 

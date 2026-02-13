@@ -34,10 +34,10 @@ import (
 	qcache "sigs.k8s.io/kueue/pkg/cache/queue"
 	schdcache "sigs.k8s.io/kueue/pkg/cache/scheduler"
 	"sigs.k8s.io/kueue/pkg/metrics"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
+	testingmetrics "sigs.k8s.io/kueue/pkg/util/kueuetesting/metrics"
+	utiltestingapi "sigs.k8s.io/kueue/pkg/util/kueuetesting/v1beta2"
 	"sigs.k8s.io/kueue/pkg/util/roletracker"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
-	testingmetrics "sigs.k8s.io/kueue/pkg/util/testing/metrics"
-	utiltestingapi "sigs.k8s.io/kueue/pkg/util/testing/v1beta2"
 )
 
 func TestUpdateCqStatusIfChanged(t *testing.T) {

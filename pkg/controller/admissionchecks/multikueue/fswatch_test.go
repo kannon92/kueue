@@ -31,7 +31,7 @@ import (
 	"k8s.io/utils/set"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 )
 
 func TestFSWatch(t *testing.T) {

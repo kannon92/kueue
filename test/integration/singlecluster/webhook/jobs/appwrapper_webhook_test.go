@@ -25,7 +25,7 @@ import (
 
 	"sigs.k8s.io/kueue/pkg/controller/jobframework"
 	"sigs.k8s.io/kueue/pkg/controller/jobs/appwrapper"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 	testingaw "sigs.k8s.io/kueue/pkg/util/testingjobs/appwrapper"
 	"sigs.k8s.io/kueue/test/util"
 )

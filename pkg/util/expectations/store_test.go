@@ -21,8 +21,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 	"sigs.k8s.io/kueue/pkg/util/parallelize"
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
 )
 
 type keyUIDs struct {

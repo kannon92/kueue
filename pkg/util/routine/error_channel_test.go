@@ -21,7 +21,7 @@ import (
 	"errors"
 	"testing"
 
-	utiltesting "sigs.k8s.io/kueue/pkg/util/testing"
+	utiltesting "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 )
 
 func TestErrorChannel(t *testing.T) {

@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
-	testingutil "sigs.k8s.io/kueue/pkg/util/testing"
+	testingutil "sigs.k8s.io/kueue/pkg/util/kueuetesting"
 )
 
 var (
