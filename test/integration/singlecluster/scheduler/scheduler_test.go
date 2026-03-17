@@ -1388,6 +1388,28 @@ var _ = ginkgo.Describe("Scheduler", func() {
 			util.ExpectAdmittedWorkloadsTotalMetric(devCQ, "", 1)
 		})
 
+		ginkgo.It("Should admit workloads when multiple ClusterQueues in the same Cohort use large quotas like 1E", func() {
+			prodCQ = utiltestingapi.MakeClusterQueue("prod-cq").
+				Cohort("all").
+				ResourceGroup(*utiltestingapi.MakeFlavorQuotas("on-demand").Resource(corev1.ResourceCPU, "1E").Obj()).
+				Obj()
+			util.MustCreate(ctx, k8sClient, prodCQ)
+
+			devCQ = utiltestingapi.MakeClusterQueue("dev-cq").
+				Cohort("all").
+				ResourceGroup(*utiltestingapi.MakeFlavorQuotas("on-demand").Resource(corev1.ResourceCPU, "1000").Obj()).
+				Obj()
+			util.MustCreate(ctx, k8sClient, devCQ)
+
+			prodQueue := utiltestingapi.MakeLocalQueue("prod-queue", ns.Name).ClusterQueue(prodCQ.Name).Obj()
+			util.MustCreate(ctx, k8sClient, prodQueue)
+
+			ginkgo.By("Creating a workload that fits within the 1E quota")
+			wl := utiltestingapi.MakeWorkload("wl", ns.Name).Queue(kueue.LocalQueueName(prodQueue.Name)).Request(corev1.ResourceCPU, "3").Obj()
+			util.MustCreate(ctx, k8sClient, wl)
+			util.ExpectWorkloadsToHaveQuotaReservation(ctx, k8sClient, prodCQ.Name, wl)
+		})
+
 		ginkgo.It("Should start workloads that are under min quota before borrowing", func() {
 			prodCQ = utiltestingapi.MakeClusterQueue("prod-cq").
 				Cohort("all").
