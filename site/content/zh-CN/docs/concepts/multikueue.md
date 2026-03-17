@@ -124,7 +124,7 @@ MultiKueue 支持多种工作负载，你可以学习如何：
 - [调度 Kueue 管理的普通 Pod](docs/tasks/run/multikueue/plain_pods)。
 - [调度 Kueue 管理的 StatefulSet](docs/tasks/run/multikueue/statefulset).
 - [调度 Kueue 管理的 LeaderWorkerSet](docs/tasks/run/multikueue/leaderworkerset).
-- [调度 Kueue 管理的 外部框架 Job](docs/tasks/run/multikueue/external-frameworks.md)
+- [调度 Kueue 管理的 外部框架 Job](docs/tasks/run/multikueue/external-frameworks)
 
 
 ## 提交作业
