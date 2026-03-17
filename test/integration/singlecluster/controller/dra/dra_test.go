@@ -22,7 +22,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	resourceapi "k8s.io/api/resource/v1"
+	resourcev1 "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -852,7 +852,7 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 			resourceFlavor *kueue.ResourceFlavor
 			clusterQueue   *kueue.ClusterQueue
 			localQueue     *kueue.LocalQueue
-			deviceClass    *resourceapi.DeviceClass
+			deviceClass    *resourcev1.DeviceClass
 		)
 
 		const extendedResourceName = "example.com/gpu"
@@ -876,11 +876,11 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 			}
 			gomega.Expect(k8sClient.Create(ctx, ns)).To(gomega.Succeed())
 
-			deviceClass = &resourceapi.DeviceClass{
+			deviceClass = &resourcev1.DeviceClass{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "gpu-ext-",
 				},
-				Spec: resourceapi.DeviceClassSpec{
+				Spec: resourcev1.DeviceClassSpec{
 					ExtendedResourceName: ptr.To(extendedResourceName),
 				},
 			}
@@ -955,7 +955,7 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 			resourceFlavor *kueue.ResourceFlavor
 			clusterQueue   *kueue.ClusterQueue
 			localQueue     *kueue.LocalQueue
-			deviceClass    *resourceapi.DeviceClass
+			deviceClass    *resourcev1.DeviceClass
 		)
 
 		const (
@@ -967,9 +967,9 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 			features.SetFeatureGateDuringTest(ginkgo.GinkgoTB(), features.DynamicResourceAllocation, true)
 			features.SetFeatureGateDuringTest(ginkgo.GinkgoTB(), features.DRAExtendedResources, true)
 
-			deviceClass = &resourceapi.DeviceClass{
+			deviceClass = &resourcev1.DeviceClass{
 				ObjectMeta: metav1.ObjectMeta{Name: "gpu.example.com"},
-				Spec: resourceapi.DeviceClassSpec{
+				Spec: resourcev1.DeviceClassSpec{
 					ExtendedResourceName: ptr.To(extendedResourceName),
 				},
 			}

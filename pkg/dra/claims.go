@@ -387,6 +387,9 @@ func validateCELSelectorsAgainstDevices(ctx context.Context, cl client.Client, c
 			}
 			if allMatch {
 				matchCount++
+				if matchCount >= cr.count {
+					break
+				}
 			}
 		}
 
