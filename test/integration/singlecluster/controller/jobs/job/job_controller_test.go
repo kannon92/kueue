@@ -4328,6 +4328,303 @@ var _ = ginkgo.Describe("Job with elastic jobs via workload-slices support", gin
 	})
 })
 
+var _ = ginkgo.Describe("Job controller with LocalQueue default execution time", ginkgo.Ordered, ginkgo.ContinueOnFailure, func() {
+	var (
+		ns           *corev1.Namespace
+		clusterQueue *kueue.ClusterQueue
+		localQueue   *kueue.LocalQueue
+		onDemand     *kueue.ResourceFlavor
+	)
+
+	ginkgo.BeforeAll(func() {
+		fwk.StartManager(ctx, cfg, managerAndControllersSetup(false, false, nil))
+	})
+	ginkgo.AfterAll(func() {
+		fwk.StopManager(ctx)
+	})
+
+	ginkgo.BeforeEach(func() {
+		ns = util.CreateNamespaceFromPrefixWithLog(ctx, k8sClient, "lq-exec-time-")
+
+		onDemand = utiltestingapi.MakeResourceFlavor("on-demand").NodeLabel(instanceKey, "on-demand").Obj()
+		util.MustCreate(ctx, k8sClient, onDemand)
+
+		clusterQueue = utiltestingapi.MakeClusterQueue("exec-time-cq").
+			ResourceGroup(
+				*utiltestingapi.MakeFlavorQuotas("on-demand").Resource(corev1.ResourceCPU, "5").Obj(),
+			).Obj()
+		util.MustCreate(ctx, k8sClient, clusterQueue)
+	})
+
+	ginkgo.AfterEach(func() {
+		gomega.Expect(util.DeleteNamespace(ctx, k8sClient, ns)).To(gomega.Succeed())
+		util.ExpectObjectToBeDeleted(ctx, k8sClient, clusterQueue, true)
+		util.ExpectObjectToBeDeleted(ctx, k8sClient, onDemand, true)
+	})
+
+	ginkgo.It("should set workload MaximumExecutionTimeSeconds from LocalQueue default", func() {
+		localQueue = utiltestingapi.MakeLocalQueue("lq-with-timeout", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			MaximumExecutionTimeSeconds(120).
+			Obj()
+		util.MustCreate(ctx, k8sClient, localQueue)
+
+		job := testingjob.MakeJob("job-no-label", ns.Name).
+			Queue(kueue.LocalQueueName(localQueue.Name)).
+			Suspend(true).
+			Parallelism(1).
+			Request(corev1.ResourceCPU, "1").
+			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
+			Obj()
+		util.MustCreate(ctx, k8sClient, job)
+
+		createdWorkload := &kueue.Workload{}
+		wlLookupKey := types.NamespacedName{
+			Name:      workloadjob.GetWorkloadNameForJob(job.Name, job.UID),
+			Namespace: ns.Name,
+		}
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(120)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+	})
+
+	ginkgo.It("should use job label over LocalQueue default for MaximumExecutionTimeSeconds", func() {
+		localQueue = utiltestingapi.MakeLocalQueue("lq-with-timeout-override", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			MaximumExecutionTimeSeconds(3600).
+			Obj()
+		util.MustCreate(ctx, k8sClient, localQueue)
+
+		job := testingjob.MakeJob("job-with-label", ns.Name).
+			Queue(kueue.LocalQueueName(localQueue.Name)).
+			Suspend(true).
+			Parallelism(1).
+			Request(corev1.ResourceCPU, "1").
+			Label(constants.MaxExecTimeSecondsLabel, "30").
+			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
+			Obj()
+		util.MustCreate(ctx, k8sClient, job)
+
+		createdWorkload := &kueue.Workload{}
+		wlLookupKey := types.NamespacedName{
+			Name:      workloadjob.GetWorkloadNameForJob(job.Name, job.UID),
+			Namespace: ns.Name,
+		}
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(30)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+	})
+
+	ginkgo.It("should not set MaximumExecutionTimeSeconds when LocalQueue has no default", func() {
+		localQueue = utiltestingapi.MakeLocalQueue("lq-without-timeout", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			Obj()
+		util.MustCreate(ctx, k8sClient, localQueue)
+
+		job := testingjob.MakeJob("job-no-timeout", ns.Name).
+			Queue(kueue.LocalQueueName(localQueue.Name)).
+			Suspend(true).
+			Parallelism(1).
+			Request(corev1.ResourceCPU, "1").
+			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
+			Obj()
+		util.MustCreate(ctx, k8sClient, job)
+
+		createdWorkload := &kueue.Workload{}
+		wlLookupKey := types.NamespacedName{
+			Name:      workloadjob.GetWorkloadNameForJob(job.Name, job.UID),
+			Namespace: ns.Name,
+		}
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+		gomega.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.BeNil())
+	})
+
+	ginkgo.It("should keep the original timeout when a job moves to a different LocalQueue", func() {
+		lqA := utiltestingapi.MakeLocalQueue("lq-a-timeout", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			MaximumExecutionTimeSeconds(120).
+			Obj()
+		util.MustCreate(ctx, k8sClient, lqA)
+
+		lqB := utiltestingapi.MakeLocalQueue("lq-b-timeout", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			MaximumExecutionTimeSeconds(3600).
+			Obj()
+		util.MustCreate(ctx, k8sClient, lqB)
+
+		job := testingjob.MakeJob("job-move-queue", ns.Name).
+			Queue(kueue.LocalQueueName(lqA.Name)).
+			Suspend(true).
+			Parallelism(1).
+			Request(corev1.ResourceCPU, "1").
+			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
+			Obj()
+		util.MustCreate(ctx, k8sClient, job)
+
+		createdWorkload := &kueue.Workload{}
+		wlLookupKey := types.NamespacedName{
+			Name:      workloadjob.GetWorkloadNameForJob(job.Name, job.UID),
+			Namespace: ns.Name,
+		}
+
+		ginkgo.By("checking the workload is created with lq-a's timeout")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(120)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		ginkgo.By("moving the job to lq-b by updating the queue label")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(job), job)).To(gomega.Succeed())
+			job.Labels[constants.QueueLabel] = lqB.Name
+			g.Expect(k8sClient.Update(ctx, job)).To(gomega.Succeed())
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		ginkgo.By("checking the workload's queue name is updated but the timeout is unchanged")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.QueueName).To(gomega.Equal(kueue.LocalQueueName(lqB.Name)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		gomega.Consistently(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(120)))
+		}, util.ConsistentDuration, util.ShortInterval).Should(gomega.Succeed())
+	})
+
+	ginkgo.It("should not update existing workload timeout when LocalQueue timeout is modified", func() {
+		localQueue = utiltestingapi.MakeLocalQueue("lq-modify-timeout", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			MaximumExecutionTimeSeconds(120).
+			Obj()
+		util.MustCreate(ctx, k8sClient, localQueue)
+
+		job := testingjob.MakeJob("job-lq-modified", ns.Name).
+			Queue(kueue.LocalQueueName(localQueue.Name)).
+			Suspend(true).
+			Parallelism(1).
+			Request(corev1.ResourceCPU, "1").
+			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
+			Obj()
+		util.MustCreate(ctx, k8sClient, job)
+
+		createdWorkload := &kueue.Workload{}
+		wlLookupKey := types.NamespacedName{
+			Name:      workloadjob.GetWorkloadNameForJob(job.Name, job.UID),
+			Namespace: ns.Name,
+		}
+
+		ginkgo.By("checking the workload is created with the original LQ timeout")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(120)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		ginkgo.By("modifying the LocalQueue's timeout")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(localQueue), localQueue)).To(gomega.Succeed())
+			if localQueue.Spec.WorkloadDefaults == nil {
+				localQueue.Spec.WorkloadDefaults = &kueue.LocalQueueWorkloadDefaults{}
+			}
+			localQueue.Spec.WorkloadDefaults.MaximumExecutionTimeSeconds = ptr.To[int32](7200)
+			g.Expect(k8sClient.Update(ctx, localQueue)).To(gomega.Succeed())
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		ginkgo.By("checking the existing workload still has the original timeout")
+		gomega.Consistently(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(120)))
+		}, util.ConsistentDuration, util.ShortInterval).Should(gomega.Succeed())
+	})
+})
+
+var _ = ginkgo.Describe("Job controller with LocalQueue default execution time and scheduler", ginkgo.Ordered, ginkgo.ContinueOnFailure, func() {
+	var (
+		ns           *corev1.Namespace
+		clusterQueue *kueue.ClusterQueue
+		localQueue   *kueue.LocalQueue
+		onDemand     *kueue.ResourceFlavor
+	)
+
+	ginkgo.BeforeAll(func() {
+		fwk.StartManager(ctx, cfg, managerAndControllersSetup(false, true, nil))
+	})
+	ginkgo.AfterAll(func() {
+		fwk.StopManager(ctx)
+	})
+
+	ginkgo.BeforeEach(func() {
+		ns = util.CreateNamespaceFromPrefixWithLog(ctx, k8sClient, "lq-exec-sched-")
+
+		onDemand = utiltestingapi.MakeResourceFlavor("on-demand").NodeLabel(instanceKey, "on-demand").Obj()
+		util.MustCreate(ctx, k8sClient, onDemand)
+
+		clusterQueue = utiltestingapi.MakeClusterQueue("exec-time-sched-cq").
+			ResourceGroup(
+				*utiltestingapi.MakeFlavorQuotas("on-demand").Resource(corev1.ResourceCPU, "5").Obj(),
+			).Obj()
+		util.MustCreate(ctx, k8sClient, clusterQueue)
+	})
+
+	ginkgo.AfterEach(func() {
+		gomega.Expect(util.DeleteNamespace(ctx, k8sClient, ns)).To(gomega.Succeed())
+		util.ExpectObjectToBeDeleted(ctx, k8sClient, clusterQueue, true)
+		util.ExpectObjectToBeDeleted(ctx, k8sClient, onDemand, true)
+	})
+
+	ginkgo.It("should admit and run a job with LocalQueue-sourced timeout without equivalency mismatch", func() {
+		localQueue = utiltestingapi.MakeLocalQueue("lq-admit-timeout", ns.Name).
+			ClusterQueue(clusterQueue.Name).
+			MaximumExecutionTimeSeconds(300).
+			Obj()
+		util.MustCreate(ctx, k8sClient, localQueue)
+
+		job := testingjob.MakeJob("job-admit-timeout", ns.Name).
+			Queue(kueue.LocalQueueName(localQueue.Name)).
+			Suspend(true).
+			Parallelism(1).
+			Request(corev1.ResourceCPU, "1").
+			Image(util.GetAgnHostImage(), util.BehaviorWaitForDeletion).
+			Obj()
+		util.MustCreate(ctx, k8sClient, job)
+
+		createdWorkload := &kueue.Workload{}
+		wlLookupKey := types.NamespacedName{
+			Name:      workloadjob.GetWorkloadNameForJob(job.Name, job.UID),
+			Namespace: ns.Name,
+		}
+
+		ginkgo.By("checking the workload is created with the LocalQueue timeout")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(createdWorkload.Spec.MaximumExecutionTimeSeconds).NotTo(gomega.BeNil())
+			g.Expect(*createdWorkload.Spec.MaximumExecutionTimeSeconds).To(gomega.Equal(int32(300)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		ginkgo.By("checking the job gets admitted and unsuspended by the scheduler")
+		gomega.Eventually(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, client.ObjectKeyFromObject(job), job)).To(gomega.Succeed())
+			g.Expect(job.Spec.Suspend).To(gomega.Equal(ptr.To(false)))
+		}, util.Timeout, util.Interval).Should(gomega.Succeed())
+
+		ginkgo.By("checking the workload remains admitted (no equivalency mismatch)")
+		gomega.Consistently(func(g gomega.Gomega) {
+			g.Expect(k8sClient.Get(ctx, wlLookupKey, createdWorkload)).To(gomega.Succeed())
+			g.Expect(workload.IsAdmitted(createdWorkload)).To(gomega.BeTrue())
+		}, util.ConsistentDuration, util.ShortInterval).Should(gomega.Succeed())
+	})
+})
+
 var _ = ginkgo.Describe("Job reconciliation", ginkgo.Ordered, func() {
 	const (
 		cqName = "cluster-queue"
