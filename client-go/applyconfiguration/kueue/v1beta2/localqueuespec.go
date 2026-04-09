@@ -42,6 +42,9 @@ type LocalQueueSpecApplyConfiguration struct {
 	// participating in AdmissionFairSharing.  The values are only relevant
 	// if AdmissionFairSharing is enabled in the Kueue configuration.
 	FairSharing *FairSharingApplyConfiguration `json:"fairSharing,omitempty"`
+	// workloadDefaults defines default values that are applied to workloads
+	// submitted to this LocalQueue when the workload does not already specify them.
+	WorkloadDefaults *LocalQueueWorkloadDefaultsApplyConfiguration `json:"workloadDefaults,omitempty"`
 }
 
 // LocalQueueSpecApplyConfiguration constructs a declarative configuration of the LocalQueueSpec type for use with
@@ -71,5 +74,13 @@ func (b *LocalQueueSpecApplyConfiguration) WithStopPolicy(value kueuev1beta2.Sto
 // If called multiple times, the FairSharing field is set to the value of the last call.
 func (b *LocalQueueSpecApplyConfiguration) WithFairSharing(value *FairSharingApplyConfiguration) *LocalQueueSpecApplyConfiguration {
 	b.FairSharing = value
+	return b
+}
+
+// WithWorkloadDefaults sets the WorkloadDefaults field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the WorkloadDefaults field is set to the value of the last call.
+func (b *LocalQueueSpecApplyConfiguration) WithWorkloadDefaults(value *LocalQueueWorkloadDefaultsApplyConfiguration) *LocalQueueSpecApplyConfiguration {
+	b.WorkloadDefaults = value
 	return b
 }

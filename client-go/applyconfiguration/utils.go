@@ -104,6 +104,8 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &kueuev1beta1.LocalQueueSpecApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("LocalQueueStatus"):
 		return &kueuev1beta1.LocalQueueStatusApplyConfiguration{}
+	case v1beta1.SchemeGroupVersion.WithKind("LocalQueueWorkloadDefaults"):
+		return &kueuev1beta1.LocalQueueWorkloadDefaultsApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("MultiKueueCluster"):
 		return &kueuev1beta1.MultiKueueClusterApplyConfiguration{}
 	case v1beta1.SchemeGroupVersion.WithKind("MultiKueueClusterSpec"):
@@ -240,6 +242,8 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &kueuev1beta2.LocalQueueSpecApplyConfiguration{}
 	case v1beta2.SchemeGroupVersion.WithKind("LocalQueueStatus"):
 		return &kueuev1beta2.LocalQueueStatusApplyConfiguration{}
+	case v1beta2.SchemeGroupVersion.WithKind("LocalQueueWorkloadDefaults"):
+		return &kueuev1beta2.LocalQueueWorkloadDefaultsApplyConfiguration{}
 	case v1beta2.SchemeGroupVersion.WithKind("MultiKueueCluster"):
 		return &kueuev1beta2.MultiKueueClusterApplyConfiguration{}
 	case v1beta2.SchemeGroupVersion.WithKind("MultiKueueClusterSpec"):

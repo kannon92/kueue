@@ -54,6 +54,25 @@ type LocalQueueSpec struct {
 	// if AdmissionFairSharing is enabled in the Kueue configuration.
 	// +optional
 	FairSharing *FairSharing `json:"fairSharing,omitempty"`
+
+	// workloadDefaults defines default values that are applied to workloads
+	// submitted to this LocalQueue when the workload does not already specify them.
+	// +optional
+	WorkloadDefaults *LocalQueueWorkloadDefaults `json:"workloadDefaults,omitempty"`
+}
+
+// LocalQueueWorkloadDefaults defines default values that are applied to
+// workloads submitted to this LocalQueue when the workload does not already
+// specify them.
+type LocalQueueWorkloadDefaults struct {
+	// maximumExecutionTimeSeconds if provided, determines the default maximum
+	// time, in seconds, for workloads submitted to this LocalQueue.
+	// This value is used when the job does not already specify a maximum execution
+	// time via the kueue.x-k8s.io/max-exec-time-seconds label.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	MaximumExecutionTimeSeconds *int32 `json:"maximumExecutionTimeSeconds,omitempty"`
 }
 
 // Deprecated: LocalQueueFlavorStatus is deprecated and marked for removal in v1beta2.

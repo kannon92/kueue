@@ -1742,6 +1742,16 @@ participating in AdmissionFairSharing.  The values are only relevant
 if AdmissionFairSharing is enabled in the Kueue configuration.</p>
 </td>
 </tr>
+<tr><td><code>maximumExecutionTimeSeconds</code><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>maximumExecutionTimeSeconds if provided, determines the default maximum
+time, in seconds, for workloads submitted to this LocalQueue.
+This value is used when the job does not already specify a maximum execution
+time via the kueue.x-k8s.io/max-exec-time-seconds label.</p>
+</td>
+</tr>
 </tbody>
 </table>
 
