@@ -63,6 +63,7 @@ func TestReconciler(t *testing.T) {
 		leaderWorkerSet         *leaderworkersetv1.LeaderWorkerSet
 		workloads               []kueue.Workload
 		workloadPriorityClasses []kueue.WorkloadPriorityClass
+		localQueues             []kueue.LocalQueue
 		wantLeaderWorkerSets    []leaderworkersetv1.LeaderWorkerSet
 		wantWorkloads           []kueue.Workload
 		wantEvents              []utiltesting.EventRecord
@@ -979,6 +980,110 @@ func TestReconciler(t *testing.T) {
 				},
 			},
 		},
+		"maximum execution time is set from LocalQueue default when no label is set": {
+			featureGates: map[featuregate.Feature]bool{
+				features.TopologyAwareScheduling: false,
+			},
+			leaderWorkerSet: leaderworkerset.MakeLeaderWorkerSet(testLWS, testNS).
+				UID(testUID).
+				Queue("test-queue").
+				Obj(),
+			localQueues: []kueue.LocalQueue{
+				*utiltestingapi.MakeLocalQueue("test-queue", testNS).
+					MaximumExecutionTimeSeconds(3600).
+					Obj(),
+			},
+			wantLeaderWorkerSets: []leaderworkersetv1.LeaderWorkerSet{
+				*leaderworkerset.MakeLeaderWorkerSet(testLWS, testNS).
+					UID(testUID).
+					Queue("test-queue").
+					Obj(),
+			},
+			wantWorkloads: []kueue.Workload{
+				*utiltestingapi.MakeWorkload(GetWorkloadName(types.UID(testUID), testLWS, "0"), testNS).
+					JobUID(testUID).
+					OwnerReference(gvk, testLWS, testUID).
+					Annotation(podconstants.IsGroupWorkloadAnnotationKey, podconstants.IsGroupWorkloadAnnotationValue).
+					Annotation(constants.JobOwnerGVKAnnotation, gvk.String()).
+					Annotation(constants.JobOwnerNameAnnotation, testLWS).
+					Annotation(constants.ComponentWorkloadIndexAnnotation, "0").
+					Finalizers(kueue.ResourceInUseFinalizerName).
+					Queue("test-queue").
+					MaximumExecutionTimeSeconds(3600).
+					PodSets(
+						*utiltestingapi.MakePodSet(kueue.DefaultPodSetName, 1).
+							RestartPolicy("").
+							Image("pause").
+							Obj()).
+					Priority(0).
+					Obj(),
+			},
+			wantEvents: []utiltesting.EventRecord{
+				{
+					Key:       types.NamespacedName{Name: testLWS, Namespace: testNS},
+					EventType: corev1.EventTypeNormal,
+					Reason:    jobframework.ReasonCreatedWorkload,
+					Message: fmt.Sprintf(
+						"Created Workload: %s/%s",
+						testNS,
+						GetWorkloadName(types.UID(testUID), testLWS, "0"),
+					),
+				},
+			},
+		},
+		"job label maximum execution time takes precedence over LocalQueue default": {
+			featureGates: map[featuregate.Feature]bool{
+				features.TopologyAwareScheduling: false,
+			},
+			leaderWorkerSet: leaderworkerset.MakeLeaderWorkerSet(testLWS, testNS).
+				UID(testUID).
+				Queue("test-queue").
+				Label(constants.MaxExecTimeSecondsLabel, "10").
+				Obj(),
+			localQueues: []kueue.LocalQueue{
+				*utiltestingapi.MakeLocalQueue("test-queue", testNS).
+					MaximumExecutionTimeSeconds(3600).
+					Obj(),
+			},
+			wantLeaderWorkerSets: []leaderworkersetv1.LeaderWorkerSet{
+				*leaderworkerset.MakeLeaderWorkerSet(testLWS, testNS).
+					UID(testUID).
+					Queue("test-queue").
+					Label(constants.MaxExecTimeSecondsLabel, "10").
+					Obj(),
+			},
+			wantWorkloads: []kueue.Workload{
+				*utiltestingapi.MakeWorkload(GetWorkloadName(types.UID(testUID), testLWS, "0"), testNS).
+					JobUID(testUID).
+					OwnerReference(gvk, testLWS, testUID).
+					Annotation(podconstants.IsGroupWorkloadAnnotationKey, podconstants.IsGroupWorkloadAnnotationValue).
+					Annotation(constants.JobOwnerGVKAnnotation, gvk.String()).
+					Annotation(constants.JobOwnerNameAnnotation, testLWS).
+					Annotation(constants.ComponentWorkloadIndexAnnotation, "0").
+					Finalizers(kueue.ResourceInUseFinalizerName).
+					Queue("test-queue").
+					MaximumExecutionTimeSeconds(10).
+					PodSets(
+						*utiltestingapi.MakePodSet(kueue.DefaultPodSetName, 1).
+							RestartPolicy("").
+							Image("pause").
+							Obj()).
+					Priority(0).
+					Obj(),
+			},
+			wantEvents: []utiltesting.EventRecord{
+				{
+					Key:       types.NamespacedName{Name: testLWS, Namespace: testNS},
+					EventType: corev1.EventTypeNormal,
+					Reason:    jobframework.ReasonCreatedWorkload,
+					Message: fmt.Sprintf(
+						"Created Workload: %s/%s",
+						testNS,
+						GetWorkloadName(types.UID(testUID), testLWS, "0"),
+					),
+				},
+			},
+		},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -987,13 +1092,16 @@ func TestReconciler(t *testing.T) {
 			clientBuilder := utiltesting.NewClientBuilder(leaderworkersetv1.AddToScheme)
 			indexer := utiltesting.AsIndexer(clientBuilder)
 
-			objs := make([]client.Object, 0, len(tc.workloads)+len(tc.workloadPriorityClasses)+1)
+			objs := make([]client.Object, 0, len(tc.workloads)+len(tc.workloadPriorityClasses)+len(tc.localQueues)+1)
 			objs = append(objs, tc.leaderWorkerSet)
 			for _, wl := range tc.workloads {
 				objs = append(objs, &wl)
 			}
 			for _, wpc := range tc.workloadPriorityClasses {
 				objs = append(objs, &wpc)
+			}
+			for i := range tc.localQueues {
+				objs = append(objs, &tc.localQueues[i])
 			}
 
 			kClient := clientBuilder.WithObjects(objs...).Build()

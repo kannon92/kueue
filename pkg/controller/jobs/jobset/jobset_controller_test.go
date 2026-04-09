@@ -384,6 +384,7 @@ func TestReconciler(t *testing.T) {
 		reconcilerOptions []jobframework.Option
 		job               *jobset.JobSet
 		priorityClasses   []client.Object
+		localQueues       []kueue.LocalQueue
 		wantJob           *jobset.JobSet
 		wantWorkloads     []kueue.Workload
 		wantErr           error
@@ -561,6 +562,90 @@ func TestReconciler(t *testing.T) {
 					Obj(),
 			},
 		},
+		"maximum execution time is set from LocalQueue default when no label is set": {
+			reconcilerOptions: []jobframework.Option{
+				jobframework.WithManageJobsWithoutQueueName(true),
+				jobframework.WithManagedJobsNamespaceSelector(labels.Everything()),
+			},
+			job: testingjobset.MakeJobSet("jobset", "ns").Queue("test-queue").ReplicatedJobs(
+				testingjobset.ReplicatedJobRequirements{
+					Name:        "replicated-job-1",
+					Replicas:    1,
+					Completions: 1,
+					Parallelism: 1,
+				},
+			).Obj(),
+			localQueues: []kueue.LocalQueue{
+				*utiltestingapi.MakeLocalQueue("test-queue", "ns").
+					MaximumExecutionTimeSeconds(3600).
+					Obj(),
+			},
+			wantJob: testingjobset.MakeJobSet("jobset", "ns").Queue("test-queue").ReplicatedJobs(
+				testingjobset.ReplicatedJobRequirements{
+					Name:        "replicated-job-1",
+					Replicas:    1,
+					Completions: 1,
+					Parallelism: 1,
+				},
+			).Obj(),
+			wantWorkloads: []kueue.Workload{
+				*utiltestingapi.MakeWorkload("jobset", "ns").
+					Queue("test-queue").
+					MaximumExecutionTimeSeconds(3600).
+					PodSets(
+						*utiltestingapi.MakePodSet("replicated-job-1", 1).
+							PodIndexLabel(ptr.To("batch.kubernetes.io/job-completion-index")).
+							SubGroupIndexLabel(ptr.To(jobset.JobIndexKey)).
+							SubGroupCount(ptr.To[int32](1)).
+							Obj(),
+					).
+					Obj(),
+			},
+		},
+		"job label maximum execution time takes precedence over LocalQueue default": {
+			reconcilerOptions: []jobframework.Option{
+				jobframework.WithManageJobsWithoutQueueName(true),
+				jobframework.WithManagedJobsNamespaceSelector(labels.Everything()),
+			},
+			job: testingjobset.MakeJobSet("jobset", "ns").Queue("test-queue").
+				Label(controllerconsts.MaxExecTimeSecondsLabel, "10").
+				ReplicatedJobs(
+					testingjobset.ReplicatedJobRequirements{
+						Name:        "replicated-job-1",
+						Replicas:    1,
+						Completions: 1,
+						Parallelism: 1,
+					},
+				).Obj(),
+			localQueues: []kueue.LocalQueue{
+				*utiltestingapi.MakeLocalQueue("test-queue", "ns").
+					MaximumExecutionTimeSeconds(3600).
+					Obj(),
+			},
+			wantJob: testingjobset.MakeJobSet("jobset", "ns").Queue("test-queue").
+				Label(controllerconsts.MaxExecTimeSecondsLabel, "10").
+				ReplicatedJobs(
+					testingjobset.ReplicatedJobRequirements{
+						Name:        "replicated-job-1",
+						Replicas:    1,
+						Completions: 1,
+						Parallelism: 1,
+					},
+				).Obj(),
+			wantWorkloads: []kueue.Workload{
+				*utiltestingapi.MakeWorkload("jobset", "ns").
+					Queue("test-queue").
+					MaximumExecutionTimeSeconds(10).
+					PodSets(
+						*utiltestingapi.MakePodSet("replicated-job-1", 1).
+							PodIndexLabel(ptr.To("batch.kubernetes.io/job-completion-index")).
+							SubGroupIndexLabel(ptr.To(jobset.JobIndexKey)).
+							SubGroupCount(ptr.To[int32](1)).
+							Obj(),
+					).
+					Obj(),
+			},
+		},
 	}
 
 	for name, tc := range cases {
@@ -572,6 +657,9 @@ func TestReconciler(t *testing.T) {
 				t.Fatalf("Could not setup indexes: %v", err)
 			}
 			objs := append(tc.priorityClasses, tc.job, testNamespace)
+			for i := range tc.localQueues {
+				objs = append(objs, &tc.localQueues[i])
+			}
 			kClient := clientBuilder.WithObjects(objs...).Build()
 			recorder := record.NewBroadcaster().NewRecorder(kClient.Scheme(), corev1.EventSource{Component: "test"})
 			reconciler, err := NewReconciler(ctx, kClient, indexer, recorder, tc.reconcilerOptions...)

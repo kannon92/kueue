@@ -237,6 +237,9 @@ func (r *Reconciler) createPrebuiltWorkload(ctx context.Context, lws *leaderwork
 		return err
 	}
 
+	defaults := jobframework.GetLocalQueueDefaults(ctx, r.client, createdWorkload.Spec.QueueName, createdWorkload.Namespace)
+	jobframework.ApplyLocalQueueDefaults(defaults, createdWorkload)
+
 	err = r.client.Create(ctx, createdWorkload)
 	if err != nil {
 		return err

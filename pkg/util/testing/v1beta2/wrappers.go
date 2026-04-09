@@ -754,6 +754,15 @@ func (q *LocalQueueWrapper) FairSharing(fs *kueue.FairSharing) *LocalQueueWrappe
 	return q
 }
 
+// MaximumExecutionTimeSeconds sets the default maximum execution time on the LocalQueue.
+func (q *LocalQueueWrapper) MaximumExecutionTimeSeconds(v int32) *LocalQueueWrapper {
+	if q.Spec.WorkloadDefaults == nil {
+		q.Spec.WorkloadDefaults = &kueue.LocalQueueWorkloadDefaults{}
+	}
+	q.Spec.WorkloadDefaults.MaximumExecutionTimeSeconds = &v
+	return q
+}
+
 // PendingWorkloads updates the pendingWorkloads in status.
 func (q *LocalQueueWrapper) PendingWorkloads(n int32) *LocalQueueWrapper {
 	q.Status.PendingWorkloads = n

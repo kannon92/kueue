@@ -49,6 +49,15 @@ func (q *LocalQueueWrapper) ClusterQueue(c string) *LocalQueueWrapper {
 	return q
 }
 
+// MaximumExecutionTimeSeconds sets the default maximum execution time on the LocalQueue.
+func (q *LocalQueueWrapper) MaximumExecutionTimeSeconds(v int32) *LocalQueueWrapper {
+	if q.Spec.WorkloadDefaults == nil {
+		q.Spec.WorkloadDefaults = &kueue.LocalQueueWorkloadDefaults{}
+	}
+	q.Spec.WorkloadDefaults.MaximumExecutionTimeSeconds = &v
+	return q
+}
+
 // ClusterQueueWrapper wraps a ClusterQueue.
 type ClusterQueueWrapper struct{ kueue.ClusterQueue }
 

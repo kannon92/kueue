@@ -1196,9 +1196,14 @@ func EquivalentToWorkload(ctx context.Context, c client.Client, job GenericJob, 
 		return false, nil
 	}
 
-	defaultDuration := int32(-1)
-	if ptr.Deref(wl.Spec.MaximumExecutionTimeSeconds, defaultDuration) != ptr.Deref(MaximumExecutionTimeSeconds(job), defaultDuration) {
-		return false, nil
+	// Only compare MaximumExecutionTimeSeconds when the job explicitly has the
+	// max-exec-time-seconds label. If the label is absent, the workload's value
+	// may have been inherited from the LocalQueue, and no mismatch should be reported.
+	if jobMaxExecTime := MaximumExecutionTimeSeconds(job); jobMaxExecTime != nil {
+		defaultDuration := int32(-1)
+		if ptr.Deref(wl.Spec.MaximumExecutionTimeSeconds, defaultDuration) != *jobMaxExecTime {
+			return false, nil
+		}
 	}
 
 	getPodSets, err := JobPodSets(ctx, job)
@@ -1235,6 +1240,7 @@ func (r *JobReconciler) updateWorkloadToMatchJob(ctx context.Context, job Generi
 	if err != nil {
 		return nil, fmt.Errorf("can't construct workload for update: %w", err)
 	}
+	r.applyLocalQueueDefaults(ctx, newWl)
 	wl.Spec = newWl.Spec
 	if err = r.client.Update(ctx, wl); err != nil {
 		return nil, fmt.Errorf("updating existed workload: %w", err)
@@ -1482,6 +1488,24 @@ func (r *JobReconciler) prepareWorkload(ctx context.Context, job GenericJob, wl 
 	return nil
 }
 
+// applyLocalQueueDefaults looks up the LocalQueue and applies its defaults
+// to the workload. Fields already set on the workload are not overridden.
+func (r *JobReconciler) applyLocalQueueDefaults(ctx context.Context, wl *kueue.Workload) {
+	defaults := GetLocalQueueDefaults(ctx, r.client, wl.Spec.QueueName, wl.Namespace)
+	ApplyLocalQueueDefaults(defaults, wl)
+}
+
+// ApplyLocalQueueMaxExecutionTime sets the workload's MaximumExecutionTimeSeconds
+// from the LocalQueue's default when the workload does not already have one set
+// (e.g. from the job's label). This is exported for use by custom reconcilers
+// (such as LeaderWorkerSet) that don't go through the generic ReconcileGenericJob path.
+//
+// Deprecated: Use GetLocalQueueDefaults and ApplyLocalQueueDefaults instead.
+func ApplyLocalQueueMaxExecutionTime(ctx context.Context, c client.Client, wl *kueue.Workload) {
+	defaults := GetLocalQueueDefaults(ctx, c, wl.Spec.QueueName, wl.Namespace)
+	ApplyLocalQueueDefaults(defaults, wl)
+}
+
 func ExtractPriority(ctx context.Context, c client.Client, obj client.Object, podSets []kueue.PodSet, customPriorityClassFunc func() string) (*kueue.PriorityClassRef, int32, error) {
 	if workloadPriorityClass := WorkloadPriorityClassName(obj); len(workloadPriorityClass) > 0 {
 		return utilpriority.GetPriorityFromWorkloadPriorityClass(ctx, c, workloadPriorityClass)
@@ -1592,6 +1616,7 @@ func (r *JobReconciler) handleJobWithNoWorkload(ctx context.Context, job Generic
 	if err != nil {
 		return err
 	}
+	r.applyLocalQueueDefaults(ctx, wl)
 	if err = r.client.Create(ctx, wl); err != nil {
 		return err
 	}
