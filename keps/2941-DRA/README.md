@@ -41,6 +41,7 @@ tags, and then generate with `hack/update-toc.sh`.
     - [Device Class Mapping Uniqueness](#device-class-mapping-uniqueness)
   - [RBAC Requirements](#rbac-requirements)
   - [CEL Expression Validation](#cel-expression-validation)
+    - [Performance Implications](#performance-implications)
   - [Workloads](#workloads)
     - [DRA-Specific Workload Processing](#dra-specific-workload-processing)
     - [Workload Processing Flow](#workload-processing-flow)
@@ -557,6 +558,13 @@ spec:
 evaluation. This package provides the same CEL environment used by the Kubernetes scheduler for DRA device
 matching.
 
+#### Performance Implications
+
+In clusters with large number of ResourceSlices, it may be necessary to index the slices based on DeviceNames.
+This work will be deferred to beta.
+
+Its not entirely clear if this is a performance bottleneck at this time due to the number of ResourceSlices being small.
+
 ### Workloads
 
 #### DRA-Specific Workload Processing
@@ -1007,7 +1015,7 @@ Use existing dra-example-driver or Kubernetes test driver for e2e testing.
 - TAS + DRA testing and support as a graduation requirement
 - re-evaluate event-driven DeviceClass tracking for late DeviceClass creation
 - re-evaluate post-scheduling quota reconciliation for DeviceClass drift
-- re-evaluate the support for TopologyAwareScheduling (might be moved to GA)
+- re-evaluate the need for indexing of resourceSlices for CEL performance lookups
 
 #### GA
 
