@@ -29,6 +29,7 @@ import (
 	"github.com/go-logr/logr/funcr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -290,10 +291,7 @@ func TestUpdateClusterQueueLabelsUpdated(t *testing.T) {
 				t.Fatalf("Failed to update ClusterQueue: %v", err)
 			}
 
-			pendingMetrics := testingmetrics.CollectFilteredGaugeVec(metrics.PendingWorkloads, map[string]string{"cluster_queue": "cq1"})
-			if len(pendingMetrics) != tc.wantMetricsCount {
-				t.Errorf("Unexpected pending workload metrics count: got %d, want %d", len(pendingMetrics), tc.wantMetricsCount)
-			}
+			expectGaugeCount(t, metrics.PendingWorkloads, tc.wantMetricsCount, map[string]string{"cluster_queue": "cq1"})
 
 			watcher.ProcessRequeues(ctx)
 
@@ -304,6 +302,111 @@ func TestUpdateClusterQueueLabelsUpdated(t *testing.T) {
 				t.Errorf("Unexpected active workloads (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestPendingResourceMetrics(t *testing.T) {
+	// CQ with cpu configured — this populates configuredResources, which is the
+	// anchor set for pending metrics (mirroring resource_reservation's Quotas).
+	cq := utiltestingapi.MakeClusterQueue("cq1").
+		ResourceGroup(
+			*utiltestingapi.MakeFlavorQuotas("default-flavor").
+				Resource(corev1.ResourceCPU, "10").
+				Obj(),
+		).Obj()
+	lq := utiltestingapi.MakeLocalQueue("foo", defaultNamespace).ClusterQueue("cq1").Obj()
+	wl1 := utiltestingapi.MakeWorkload("wl1", defaultNamespace).Queue("foo").
+		PodSets(*utiltestingapi.MakePodSet(kueue.DefaultPodSetName, 1).Request(corev1.ResourceCPU, "2").Obj()).
+		Creation(time.Now()).Obj()
+	wl2 := utiltestingapi.MakeWorkload("wl2", defaultNamespace).Queue("foo").
+		PodSets(*utiltestingapi.MakePodSet(kueue.DefaultPodSetName, 1).Request(corev1.ResourceCPU, "3").Obj()).
+		Creation(time.Now()).Obj()
+
+	cases := map[string]struct {
+		ops       func(t *testing.T, log logr.Logger, manager *Manager)
+		wantValue float64
+	}{
+		"add single workload": {
+			ops: func(t *testing.T, log logr.Logger, manager *Manager) {
+				if err := manager.AddOrUpdateWorkload(log, wl1); err != nil {
+					t.Fatalf("Failed adding wl1: %v", err)
+				}
+			},
+			wantValue: 2.0,
+		},
+		"add two workloads accumulates resources": {
+			ops: func(t *testing.T, log logr.Logger, manager *Manager) {
+				if err := manager.AddOrUpdateWorkload(log, wl1); err != nil {
+					t.Fatalf("Failed adding wl1: %v", err)
+				}
+				if err := manager.AddOrUpdateWorkload(log, wl2); err != nil {
+					t.Fatalf("Failed adding wl2: %v", err)
+				}
+			},
+			wantValue: 5.0,
+		},
+		"delete one of two workloads reduces resources": {
+			ops: func(t *testing.T, log logr.Logger, manager *Manager) {
+				if err := manager.AddOrUpdateWorkload(log, wl1); err != nil {
+					t.Fatalf("Failed adding wl1: %v", err)
+				}
+				if err := manager.AddOrUpdateWorkload(log, wl2); err != nil {
+					t.Fatalf("Failed adding wl2: %v", err)
+				}
+				manager.DeleteWorkload(log, workload.Key(wl2))
+			},
+			wantValue: 2.0,
+		},
+		"delete all workloads keeps configured series at zero": {
+			ops: func(t *testing.T, log logr.Logger, manager *Manager) {
+				if err := manager.AddOrUpdateWorkload(log, wl1); err != nil {
+					t.Fatalf("Failed adding wl1: %v", err)
+				}
+				manager.DeleteWorkload(log, workload.Key(wl1))
+			},
+			wantValue: 0.0,
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			ctx, log := utiltesting.ContextWithLog(t)
+			cl := utiltesting.NewFakeClient(utiltesting.MakeNamespace(defaultNamespace))
+			manager, _ := NewManagerForUnitTestsWithRequeuer(cl, nil, WithPreemptionExpectations(preemptexpectations.New()), WithResourceMetrics(true))
+			if err := manager.AddClusterQueue(ctx, cq); err != nil {
+				t.Fatalf("Failed adding clusterQueue: %v", err)
+			}
+			if err := manager.AddLocalQueue(ctx, lq); err != nil {
+				t.Fatalf("Failed adding queue: %v", err)
+			}
+
+			metrics.ClusterQueueResourcePending.Reset()
+			pendingLabels := map[string]string{"cluster_queue": "cq1", "resource": "cpu"}
+
+			tc.ops(t, log, manager)
+
+			expectGaugeCount(t, metrics.ClusterQueueResourcePending, 1, pendingLabels)
+			expectGaugeValue(t, metrics.ClusterQueueResourcePending, pendingLabels, tc.wantValue)
+		})
+	}
+}
+
+func expectGaugeCount(t *testing.T, collector prometheus.Collector, want int, labels map[string]string) {
+	t.Helper()
+	got := len(testingmetrics.CollectFilteredGaugeVec(collector, labels))
+	if got != want {
+		t.Fatalf("unexpected metric count for labels %v: got=%d want=%d", labels, got, want)
+	}
+}
+
+func expectGaugeValue(t *testing.T, collector prometheus.Collector, labels map[string]string, want float64) {
+	t.Helper()
+	dps := testingmetrics.CollectFilteredGaugeVec(collector, labels)
+	if len(dps) != 1 {
+		t.Fatalf("expected exactly one metric for labels %v, got=%d", labels, len(dps))
+	}
+	if dps[0].Value != want {
+		t.Fatalf("unexpected metric value for labels %v: got=%v want=%v", labels, dps[0].Value, want)
 	}
 }
 
