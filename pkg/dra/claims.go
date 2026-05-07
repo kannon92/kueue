@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
@@ -260,14 +261,9 @@ func extractCELRequests(claimSpec *resourcev1.ResourceClaimSpec) []celDeviceRequ
 		if req.Exactly == nil || len(req.Exactly.Selectors) == 0 {
 			continue
 		}
-		hasCEL := false
-		for _, sel := range req.Exactly.Selectors {
-			if sel.CEL != nil {
-				hasCEL = true
-				break
-			}
-		}
-		if hasCEL {
+		if slices.ContainsFunc(req.Exactly.Selectors, func(sel resourcev1.DeviceSelector) bool {
+			return sel.CEL != nil
+		}) {
 			result = append(result, celDeviceRequest{
 				index:           i,
 				count:           req.Exactly.Count,
@@ -277,6 +273,140 @@ func extractCELRequests(claimSpec *resourcev1.ResourceClaimSpec) []celDeviceRequ
 		}
 	}
 	return result
+}
+
+// compileCELSelectors compiles CEL expressions from selectors, skipping non-CEL selectors.
+// Returns compiled results and any compilation errors encountered.
+func compileCELSelectors(selectors []resourcev1.DeviceSelector, errPath *field.Path, errContext string) ([]dracel.CompilationResult, field.ErrorList) {
+	var compiled []dracel.CompilationResult
+	var allErrs field.ErrorList
+
+	for i, sel := range selectors {
+		if sel.CEL == nil {
+			continue
+		}
+		result := celCache.GetOrCompile(sel.CEL.Expression)
+		if result.Error != nil {
+			allErrs = append(allErrs, field.Invalid(
+				errPath.Index(i).Child("cel", "expression"),
+				sel.CEL.Expression,
+				fmt.Sprintf("%s: %s", errContext, result.Error.Detail),
+			))
+		} else {
+			compiled = append(compiled, result)
+		}
+	}
+	return compiled, allErrs
+}
+
+// evaluateSelectorsOnDevice checks if all compiled CEL selectors match the given device.
+// Returns (allMatch bool, firstError error). If any selector fails to evaluate or returns
+// false, allMatch will be false. The first evaluation error encountered is returned.
+func evaluateSelectorsOnDevice(ctx context.Context, selectors []dracel.CompilationResult, dev dracel.Device) (bool, error) {
+	for _, comp := range selectors {
+		matches, _, err := comp.DeviceMatches(ctx, dev)
+		if err != nil {
+			return false, err
+		}
+		if !matches {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// buildDeviceListFromSlices extracts all devices from ResourceSlices into CEL device representations.
+func buildDeviceListFromSlices(slices []resourcev1.ResourceSlice) []dracel.Device {
+	var devices []dracel.Device
+	for i := range slices {
+		slice := &slices[i]
+		for j := range slice.Spec.Devices {
+			dev := &slice.Spec.Devices[j]
+			devices = append(devices, dracel.Device{
+				Driver:     slice.Spec.Driver,
+				Attributes: dev.Attributes,
+				Capacity:   dev.Capacity,
+			})
+		}
+	}
+	return devices
+}
+
+// resolveAndCompileDeviceClass fetches and compiles selectors for a DeviceClass, using cache.
+// Returns compiled selectors and a field error if the class cannot be resolved or has invalid CEL.
+func resolveAndCompileDeviceClass(
+	ctx context.Context,
+	cl client.Client,
+	className string,
+	cache map[string]*resourcev1.DeviceClass,
+	basePath *field.Path,
+	reqIndex int,
+) ([]dracel.CompilationResult, *field.Error) {
+	if className == "" {
+		return nil, nil
+	}
+
+	dc, ok := cache[className]
+	if !ok {
+		dc = &resourcev1.DeviceClass{}
+		if err := cl.Get(ctx, client.ObjectKey{Name: className}, dc); err != nil {
+			return nil, field.InternalError(
+				basePath.Child("devices", "requests").Index(reqIndex),
+				fmt.Errorf("failed to get DeviceClass %s: %w", className, err),
+			)
+		}
+		cache[className] = dc
+	}
+
+	compiled, errs := compileCELSelectors(
+		dc.Spec.Selectors,
+		basePath.Child("devices", "requests").Index(reqIndex),
+		fmt.Sprintf("DeviceClass %s has invalid CEL selector", className),
+	)
+	if len(errs) > 0 {
+		return nil, errs[0] // Return first error
+	}
+
+	return compiled, nil
+}
+
+// countMatchingDevices evaluates devices against class and request selectors,
+// marking consumed devices and returning the match count and first error encountered.
+// Devices already in the consumed map are skipped to prevent double-counting.
+func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSelectors, requestSelectors []dracel.CompilationResult, consumed map[int]bool, needed int64) (int64, error) {
+	var matchCount int64
+	var firstEvalErr error
+
+	for devIdx, dev := range devices {
+		if consumed[devIdx] {
+			continue
+		}
+
+		// First check class selectors to skip devices that don't belong to this class.
+		classMatch, err := evaluateSelectorsOnDevice(ctx, classSelectors, dev)
+		if err != nil || !classMatch {
+			continue
+		}
+
+		// Then evaluate the request's own selectors.
+		allMatch, err := evaluateSelectorsOnDevice(ctx, requestSelectors, dev)
+		if err != nil {
+			if firstEvalErr == nil {
+				firstEvalErr = err
+			}
+			continue
+		}
+
+		if allMatch {
+			consumed[devIdx] = true
+			matchCount++
+			if matchCount >= needed {
+				break
+			}
+		}
+	}
+
+	return matchCount, firstEvalErr
 }
 
 // validateCELSelectorsAgainstDevices lists all ResourceSlices in the cluster and
@@ -299,124 +429,33 @@ func validateCELSelectorsAgainstDevices(ctx context.Context, cl client.Client, c
 		return field.ErrorList{field.InternalError(basePath, fmt.Errorf("failed to list ResourceSlices: %w", err))}
 	}
 
-	// Build CEL device representations from ResourceSlices.
-	var clusterDevices []dracel.Device
-	for i := range sliceList.Items {
-		slice := &sliceList.Items[i]
-		for j := range slice.Spec.Devices {
-			dev := &slice.Spec.Devices[j]
-			clusterDevices = append(clusterDevices, dracel.Device{
-				Driver:     slice.Spec.Driver,
-				Attributes: dev.Attributes,
-				Capacity:   dev.Capacity,
-			})
-		}
-	}
+	clusterDevices := buildDeviceListFromSlices(sliceList.Items)
+	classCache := make(map[string]*resourcev1.DeviceClass)
+	consumed := make(map[int]bool)
 
 	var allErrs field.ErrorList
 
-	// Cache DeviceClass lookups so we resolve each class at most once.
-	classCache := make(map[string]*resourcev1.DeviceClass)
-
-	// Track consumed device indices across requests within the same claim spec
-	// so that a single physical device is not double-counted when multiple
-	// requests compete for the same pool of devices.
-	consumed := make(map[int]bool)
-
 	for _, cr := range celReqs {
-		// Resolve the DeviceClass and compile its selectors for pre-filtering.
-		var classSelectors []dracel.CompilationResult
-		if cr.deviceClassName != "" {
-			dc, ok := classCache[cr.deviceClassName]
-			if !ok {
-				dc = &resourcev1.DeviceClass{}
-				if err := cl.Get(ctx, client.ObjectKey{Name: cr.deviceClassName}, dc); err != nil {
-					allErrs = append(allErrs, field.InternalError(
-						basePath.Child("devices", "requests").Index(cr.index),
-						fmt.Errorf("failed to get DeviceClass %s: %w", cr.deviceClassName, err),
-					))
-					continue
-				}
-				classCache[cr.deviceClassName] = dc
-			}
-			for _, sel := range dc.Spec.Selectors {
-				if sel.CEL == nil {
-					continue
-				}
-				result := celCache.GetOrCompile(sel.CEL.Expression)
-				if result.Error != nil {
-					// DeviceClass has invalid CEL — no devices can match.
-					allErrs = append(allErrs, field.Invalid(
-						basePath.Child("devices", "requests").Index(cr.index),
-						cr.deviceClassName,
-						fmt.Sprintf("DeviceClass %s has invalid CEL selector: %s", cr.deviceClassName, result.Error.Detail),
-					))
-					continue
-				}
-				classSelectors = append(classSelectors, result)
-			}
+		classSelectors, err := resolveAndCompileDeviceClass(ctx, cl, cr.deviceClassName, classCache, basePath, cr.index)
+		if err != nil {
+			allErrs = append(allErrs, err)
+			continue
 		}
 
-		// Compile all CEL selectors for this request.
-		// Compilation errors are already caught by validateCELSelectors which
-		// runs before this function, so GetOrCompile returns cached results.
-		var compiled []dracel.CompilationResult
-		for _, sel := range cr.selectors {
-			if sel.CEL == nil {
-				continue
-			}
-			compiled = append(compiled, celCache.GetOrCompile(sel.CEL.Expression))
+		compiled, compErrs := compileCELSelectors(
+			cr.selectors,
+			basePath.Child("devices", "requests").Index(cr.index).Child("exactly", "selectors"),
+			"CEL compilation failed",
+		)
+		if len(compErrs) > 0 {
+			allErrs = append(allErrs, compErrs...)
+			continue
 		}
 		if len(compiled) == 0 {
 			continue
 		}
 
-		// Evaluate against cluster devices, pre-filtering by class selectors.
-		// Devices already consumed by earlier requests are skipped to prevent
-		// double-counting across requests within the same claim spec.
-		var matchCount int64
-		var firstEvalErr error
-		for devIdx, dev := range clusterDevices {
-			if consumed[devIdx] {
-				continue
-			}
-
-			// First check class selectors to skip devices that don't belong to this class.
-			classMatch := true
-			for _, comp := range classSelectors {
-				matches, _, err := comp.DeviceMatches(ctx, dev)
-				if err != nil || !matches {
-					classMatch = false
-					break
-				}
-			}
-			if !classMatch {
-				continue
-			}
-
-			// Then evaluate the request's own selectors.
-			allMatch := true
-			for _, comp := range compiled {
-				matches, _, err := comp.DeviceMatches(ctx, dev)
-				if err != nil {
-					if firstEvalErr == nil {
-						firstEvalErr = err
-					}
-					allMatch = false
-					break
-				} else if !matches {
-					allMatch = false
-					break
-				}
-			}
-			if allMatch {
-				consumed[devIdx] = true
-				matchCount++
-				if matchCount >= cr.count {
-					break
-				}
-			}
-		}
+		matchCount, firstEvalErr := countMatchingDevices(ctx, clusterDevices, classSelectors, compiled, consumed, cr.count)
 
 		if matchCount < cr.count {
 			if firstEvalErr != nil {

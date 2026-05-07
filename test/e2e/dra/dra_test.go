@@ -382,11 +382,7 @@ var _ = ginkgo.Describe("DRA", func() {
 			}
 
 			ginkgo.By("Verifying legitimate workload is admitted - quota was not leaked by unmatchable job")
-			legitimateWl := &kueue.Workload{}
-			gomega.Eventually(func(g gomega.Gomega) {
-				g.Expect(k8sClient.Get(ctx, legitimateWlKey, legitimateWl)).To(gomega.Succeed())
-				g.Expect(workload.HasQuotaReservation(legitimateWl)).To(gomega.BeTrue())
-			}, util.Timeout, util.Interval).Should(gomega.Succeed())
+			util.ExpectWorkloadsToBeAdmittedByKeys(ctx, k8sClient, legitimateWlKey)
 
 			ginkgo.By("Verifying legitimate job completes successfully")
 			util.ExpectJobToBeCompleted(ctx, k8sClient, legitimateJob)
