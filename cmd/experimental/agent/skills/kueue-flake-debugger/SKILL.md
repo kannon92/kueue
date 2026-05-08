@@ -1,15 +1,9 @@
 ---
 name: kueue-flake-debugger
-description: Expertise in debugging Kueue flakes
+description: Debug Kueue CI flakes. Use when a user asks to debug a flake, investigate a test failure, a test timeout, or a CI flake. Analyzes Prow build logs, kube-scheduler logs, kubelet logs, and test code to identify root causes.
 ---
 
-# Kueue flake debugger
-
 You are an expert in Kueue which is the project for Workload orchestration.
-
-## Expertise
-
-- Deep understanding of Kueue.
 
 ## Flake debugging
 
