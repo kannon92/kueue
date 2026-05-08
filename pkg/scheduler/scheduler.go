@@ -19,6 +19,7 @@ package scheduler
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -382,6 +383,14 @@ func (s *Scheduler) processEntry(
 	ctx = ctrl.LoggerInto(ctx, log)
 	log.V(2).Info("Attempting to schedule workload")
 
+	if features.Enabled(features.ConcurrentAdmission) && concurrentadmission.IsVariant(e.Obj) {
+		if moreFavorableSibling := s.findAdmittedMoreFavorableSibling(&e.Info, snapshot); moreFavorableSibling != nil {
+			log.V(3).Info("Skipping workload as a more favorable variant is already admitted", "moreFavorableVariant", klog.KObj(moreFavorableSibling.Obj))
+			e.markSkipped("A more favorable variant is already admitted")
+			return
+		}
+	}
+
 	mode := e.assignment.RepresentativeMode()
 
 	if features.Enabled(features.TASFailedNodeReplacementFailFast) && workload.HasTopologyAssignmentWithUnhealthyNode(e.Obj) && mode != flavorassigner.Fit {
@@ -444,8 +453,8 @@ func (s *Scheduler) processEntry(
 		}
 	}
 
-	if features.Enabled(features.ConcurrentAdmission) {
-		if lessFavorableSibling := s.getLessFavorableSibling(&e.Info, snapshot); lessFavorableSibling != nil {
+	if features.Enabled(features.ConcurrentAdmission) && concurrentadmission.IsVariant(e.Obj) {
+		if lessFavorableSibling := s.findAdmittedLessFavorableSibling(&e.Info, snapshot); lessFavorableSibling != nil {
 			s.issueMigration(ctx, log, e, lessFavorableSibling)
 			return
 		}
@@ -1099,7 +1108,28 @@ func (s *Scheduler) updateEntryPenalty(log logr.Logger, e *entry, op usageOp) {
 	}
 }
 
-func (s *Scheduler) getLessFavorableSibling(wl *workload.Info, snap *schdcache.Snapshot) *workload.Info {
+// findAdmittedLessFavorableSibling returns an admitted Sibling Workload that has a
+// less favorable Resource Flavor assignment than the provided Workload.
+func (s *Scheduler) findAdmittedLessFavorableSibling(wl *workload.Info, snap *schdcache.Snapshot) *workload.Info {
+	return s.findAdmittedSibling(wl, snap, func(siblingIdx, wlIdx int) bool {
+		return siblingIdx > wlIdx // larger index means less favorable
+	})
+}
+
+// findAdmittedMoreFavorableSibling returns an admitted Sibling Workload that has a
+// more favorable Resource Flavor assignment than the provided Workload.
+func (s *Scheduler) findAdmittedMoreFavorableSibling(wl *workload.Info, snap *schdcache.Snapshot) *workload.Info {
+	return s.findAdmittedSibling(wl, snap, func(siblingIdx, wlIdx int) bool {
+		return wlIdx > siblingIdx
+	})
+}
+
+// findAdmittedSibling is a helper that finds an admitted Sibling Workload matching the comparison criteria.
+//
+// A Sibling is a Workload belonging to the same Parent Workload (part of the
+// Concurrent Admission feature). Favorability is determined by the order of
+// Resource Flavors defined in the ClusterQueue
+func (s *Scheduler) findAdmittedSibling(wl *workload.Info, snap *schdcache.Snapshot, compareFunc func(siblingIdx, wlIdx int) bool) *workload.Info {
 	if !features.Enabled(features.ConcurrentAdmission) {
 		return nil
 	}
@@ -1107,37 +1137,51 @@ func (s *Scheduler) getLessFavorableSibling(wl *workload.Info, snap *schdcache.S
 	if parentUID == "" {
 		return nil
 	}
-
 	cq := snap.ClusterQueue(wl.ClusterQueue)
 	if cq == nil || len(cq.ResourceGroups) == 0 {
 		return nil
 	}
 	flavors := cq.ResourceGroups[0].Flavors
-
-	candidateFlavor := concurrentadmission.GetVariantFlavor(wl.Obj)
-	if candidateFlavor == "" {
+	wlFlavorIdx, err := getFlavorIndex(wl, flavors)
+	if err != nil {
 		return nil
 	}
+	return s.findAdmittedSiblingMatching(wl, cq, parentUID, func(sibling *workload.Info) bool {
+		siblingFlavorIdx, err := getFlavorIndex(sibling, flavors)
+		if err != nil {
+			return false
+		}
+		return compareFunc(siblingFlavorIdx, wlFlavorIdx)
+	})
+}
 
+func (s *Scheduler) findAdmittedSiblingMatching(wl *workload.Info, cq *schdcache.ClusterQueueSnapshot, parentUID types.UID, match func(sibling *workload.Info) bool) *workload.Info {
 	for _, otherWl := range cq.Workloads {
 		if otherWl.Obj.UID == wl.Obj.UID {
 			continue
 		}
-		if concurrentadmission.GetParentWorkloadUID(otherWl.Obj) == parentUID && workload.IsAdmitted(otherWl.Obj) {
-			siblingFlavor := concurrentadmission.GetVariantFlavor(otherWl.Obj)
-			if siblingFlavor != "" && isLessFavorable(candidateFlavor, siblingFlavor, flavors) {
-				return otherWl
-			}
+		if concurrentadmission.GetParentWorkloadUID(otherWl.Obj) != parentUID {
+			continue
+		}
+		if !workload.IsAdmitted(otherWl.Obj) {
+			continue
+		}
+		ok := match(otherWl)
+		if ok {
+			return otherWl
 		}
 	}
 	return nil
 }
 
-func isLessFavorable(candidate, sibling kueue.ResourceFlavorReference, flavors []kueue.ResourceFlavorReference) bool {
-	candidateIdx := slices.Index(flavors, candidate)
-	siblingIdx := slices.Index(flavors, sibling)
-	if candidateIdx == -1 || siblingIdx == -1 {
-		return false
+func getFlavorIndex(wl *workload.Info, flavors []kueue.ResourceFlavorReference) (int, error) {
+	flavor := concurrentadmission.GetVariantFlavor(wl.Obj)
+	if flavor == "" {
+		return -1, errors.New("missing variant flavor annotation")
 	}
-	return candidateIdx < siblingIdx
+	idx := slices.Index(flavors, flavor)
+	if idx == -1 {
+		return -1, fmt.Errorf("flavor %s not found in ClusterQueue flavors", flavor)
+	}
+	return idx, nil
 }
