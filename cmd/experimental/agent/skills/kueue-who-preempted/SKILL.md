@@ -1,4 +1,7 @@
-# Skill: Who Preempted My Workload
+---
+name: kueue-who-preempted
+description: Identify what preempted a workload. Use when a user asks why their workload was evicted or preempted, or wants to identify what preempted it. Investigates Kubernetes events, workload status conditions, and controller logs to trace preemption.
+---
 
 Use this when a user asks why their workload was evicted or preempted, or wants to identify what preempted it.
 
