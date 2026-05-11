@@ -17,6 +17,7 @@ limitations under the License.
 package dra
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -547,6 +548,83 @@ func Test_GetResourceRequests(t *testing.T) {
 					"",
 					"",
 				),
+			},
+		},
+		{
+			name: "CEL selectors with nonexistent DeviceClass returns error",
+			extraObjects: []runtime.Object{
+				utiltesting.MakeResourceClaimTemplate("claim-tmpl-noclass", "ns1").
+					DeviceRequest("req", "nonexistent-class", 1).
+					WithCELSelectors("device.driver == \"test-driver\"").
+					Obj(),
+				&resourcev1.ResourceSlice{
+					ObjectMeta: metav1.ObjectMeta{Name: "slice-noclass"},
+					Spec: resourcev1.ResourceSliceSpec{
+						Driver: "test-driver",
+						Pool:   resourcev1.ResourcePool{Name: "pool-1", Generation: 1, ResourceSliceCount: 1},
+						Devices: []resourcev1.Device{
+							{Name: "dev-0"},
+						},
+					},
+				},
+			},
+			modifyWL: func(w *kueue.Workload) {
+				w.Spec.PodSets[0].Template.Spec.ResourceClaims = []corev1.PodResourceClaim{
+					{Name: "req-noclass", ResourceClaimTemplateName: new("claim-tmpl-noclass")},
+				}
+			},
+			lookup: func(dc corev1.ResourceName) (corev1.ResourceName, bool) {
+				return "res-1", true
+			},
+			wantErr: field.ErrorList{
+				field.InternalError(
+					field.NewPath("spec", "podSets").Index(0).Child("template", "spec", "resourceClaims").Index(0).Child("devices", "requests").Index(0),
+					errors.New(""),
+				),
+			},
+		},
+		{
+			name: "CEL selectors with empty DeviceClassName succeeds",
+			extraObjects: []runtime.Object{
+				&resourcev1.ResourceClaimTemplate{
+					ObjectMeta: metav1.ObjectMeta{Name: "claim-tmpl-nodc", Namespace: "ns1"},
+					Spec: resourcev1.ResourceClaimTemplateSpec{
+						Spec: resourcev1.ResourceClaimSpec{
+							Devices: resourcev1.DeviceClaim{
+								Requests: []resourcev1.DeviceRequest{
+									{
+										Name: "req",
+										Exactly: &resourcev1.ExactDeviceRequest{
+											AllocationMode: resourcev1.DeviceAllocationModeExactCount,
+											Count:          1,
+											Selectors: []resourcev1.DeviceSelector{
+												{CEL: &resourcev1.CELDeviceSelector{Expression: "device.driver == \"test-driver\""}},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				&resourcev1.ResourceSlice{
+					ObjectMeta: metav1.ObjectMeta{Name: "slice-nodc"},
+					Spec: resourcev1.ResourceSliceSpec{
+						Driver: "test-driver",
+						Pool:   resourcev1.ResourcePool{Name: "pool-1", Generation: 1, ResourceSliceCount: 1},
+						Devices: []resourcev1.Device{
+							{Name: "dev-0"},
+						},
+					},
+				},
+			},
+			modifyWL: func(w *kueue.Workload) {
+				w.Spec.PodSets[0].Template.Spec.ResourceClaims = []corev1.PodResourceClaim{
+					{Name: "req-nodc", ResourceClaimTemplateName: new("claim-tmpl-nodc")},
+				}
+			},
+			lookup: func(dc corev1.ResourceName) (corev1.ResourceName, bool) {
+				return "res-1", true
 			},
 		},
 		{

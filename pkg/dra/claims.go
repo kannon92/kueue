@@ -18,7 +18,6 @@ package dra
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -233,22 +232,8 @@ func validateCELSelectors(selectors []resourcev1.DeviceSelector, fldPath *field.
 	if len(selectors) == 0 {
 		return nil
 	}
-
-	var errs []error
-	for i, sel := range selectors {
-		if sel.CEL == nil {
-			continue
-		}
-		result := celCache.GetOrCompile(sel.CEL.Expression)
-		if result.Error != nil {
-			errs = append(errs, field.Invalid(
-				fldPath.Index(i).Child("cel", "expression"),
-				sel.CEL.Expression,
-				fmt.Sprintf("CEL compilation failed: %s", result.Error.Detail),
-			))
-		}
-	}
-	return errors.Join(errs...)
+	_, compErrs := compileCELSelectors(selectors, fldPath, "CEL compilation failed")
+	return compErrs.ToAggregate()
 }
 
 // extractCELRequests returns the device requests from a claim spec that have CEL selectors.
@@ -364,37 +349,35 @@ func resolveAndCompileDeviceClass(
 		fmt.Sprintf("DeviceClass %s has invalid CEL selector", className),
 	)
 	if len(errs) > 0 {
-		return nil, errs[0] // Return first error
+		// A single class selector error is enough to reject the request.
+		return nil, errs[0]
 	}
 
 	return compiled, nil
 }
 
 // countMatchingDevices evaluates devices against class and request selectors,
-// marking consumed devices and returning the match count and first error encountered.
+// marking consumed devices and returning the match count.
 // Devices already in the consumed map are skipped to prevent double-counting.
 func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSelectors, requestSelectors []dracel.CompilationResult, consumed map[int]bool, needed int64) (int64, error) {
 	var matchCount int64
-	var firstEvalErr error
 
 	for devIdx, dev := range devices {
 		if consumed[devIdx] {
 			continue
 		}
 
-		// First check class selectors to skip devices that don't belong to this class.
 		classMatch, err := evaluateSelectorsOnDevice(ctx, classSelectors, dev)
-		if err != nil || !classMatch {
+		if err != nil {
+			return matchCount, err
+		}
+		if !classMatch {
 			continue
 		}
 
-		// Then evaluate the request's own selectors.
 		allMatch, err := evaluateSelectorsOnDevice(ctx, requestSelectors, dev)
 		if err != nil {
-			if firstEvalErr == nil {
-				firstEvalErr = err
-			}
-			continue
+			return matchCount, err
 		}
 
 		if allMatch {
@@ -406,7 +389,7 @@ func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSel
 		}
 	}
 
-	return matchCount, firstEvalErr
+	return matchCount, nil
 }
 
 // validateCELSelectorsAgainstDevices lists all ResourceSlices in the cluster and
@@ -455,13 +438,20 @@ func validateCELSelectorsAgainstDevices(ctx context.Context, cl client.Client, c
 			continue
 		}
 
-		matchCount, firstEvalErr := countMatchingDevices(ctx, clusterDevices, classSelectors, compiled, consumed, cr.count)
+		matchCount, evalErr := countMatchingDevices(ctx, clusterDevices, classSelectors, compiled, consumed, cr.count)
+
+		if evalErr != nil {
+			ctrl.LoggerFrom(ctx).V(3).Info("CEL evaluation error encountered while matching devices",
+				"deviceClassName", cr.deviceClassName, "error", evalErr)
+			allErrs = append(allErrs, field.Invalid(
+				basePath.Child("devices", "requests").Index(cr.index).Child("exactly", "selectors"),
+				nil,
+				fmt.Sprintf("CEL evaluation failed for DeviceClass %s: %v", cr.deviceClassName, evalErr),
+			))
+			continue
+		}
 
 		if matchCount < cr.count {
-			if firstEvalErr != nil {
-				ctrl.LoggerFrom(ctx).V(3).Info("CEL evaluation error encountered while matching devices",
-					"deviceClassName", cr.deviceClassName, "error", firstEvalErr)
-			}
 			allErrs = append(allErrs, field.Invalid(
 				basePath.Child("devices", "requests").Index(cr.index).Child("exactly", "selectors"),
 				nil,

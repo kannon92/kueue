@@ -58,8 +58,10 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 			clusterQueue   *kueue.ClusterQueue
 			localQueue     *kueue.LocalQueue
 			deviceClass    *resourcev1.DeviceClass
+			resourceSlices []*resourcev1.ResourceSlice
 		)
 		ginkgo.BeforeEach(func() {
+			resourceSlices = nil
 			ns = &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
 					GenerateName: "dra-",
@@ -107,6 +109,9 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 		})
 
 		ginkgo.AfterEach(func() {
+			for _, slice := range resourceSlices {
+				util.ExpectObjectToBeDeleted(ctx, k8sClient, slice, true)
+			}
 			gomega.Expect(util.DeleteNamespace(ctx, k8sClient, ns)).To(gomega.Succeed())
 			util.ExpectObjectToBeDeleted(ctx, k8sClient, clusterQueue, true)
 			util.ExpectObjectToBeDeleted(ctx, k8sClient, resourceFlavor, true)
@@ -557,32 +562,26 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 					},
 				},
 			}
-			gomega.Expect(k8sClient.Create(ctx, slice)).To(gomega.Succeed())
-			defer func() {
-				gomega.Expect(k8sClient.Delete(ctx, slice)).To(gomega.Succeed())
-			}()
+			util.MustCreate(ctx, k8sClient, slice)
+			resourceSlices = append(resourceSlices, slice)
 
 			ginkgo.By("Creating a ResourceClaimTemplate with CEL selectors")
 			rct := utiltesting.MakeResourceClaimTemplate("cel-selector-template", ns.Name).
 				DeviceRequest("device-request", "foo.example.com", 2).
 				WithCELSelectors("device.driver == \"test-driver\"").
 				Obj()
-			gomega.Expect(k8sClient.Create(ctx, rct)).To(gomega.Succeed())
+			util.MustCreate(ctx, k8sClient, rct)
 
 			ginkgo.By("Creating a workload with CEL selectors")
 			wl := utiltestingapi.MakeWorkload("test-wl-cel-selector", ns.Name).
 				Queue("test-lq").
+				PodSets(
+					*utiltestingapi.MakePodSet(kueue.DefaultPodSetName, 1).
+						ResourceClaimTemplate("device-template", "cel-selector-template").
+						Obj(),
+				).
 				Obj()
-			wl.Spec.PodSets[0].Template.Spec.ResourceClaims = []corev1.PodResourceClaim{
-				{
-					Name:                      "device-template",
-					ResourceClaimTemplateName: new("cel-selector-template"),
-				},
-			}
-			wl.Spec.PodSets[0].Template.Spec.Containers[0].Resources.Claims = []corev1.ResourceClaim{
-				{Name: "device-template"},
-			}
-			gomega.Expect(k8sClient.Create(ctx, wl)).To(gomega.Succeed())
+			util.MustCreate(ctx, k8sClient, wl)
 
 			ginkgo.By("Verifying workload is admitted with correct resource usage")
 			gomega.Eventually(func(g gomega.Gomega) {
@@ -617,32 +616,26 @@ var _ = ginkgo.Describe("DRA Integration", ginkgo.Ordered, ginkgo.ContinueOnFail
 					},
 				},
 			}
-			gomega.Expect(k8sClient.Create(ctx, slice)).To(gomega.Succeed())
-			defer func() {
-				gomega.Expect(k8sClient.Delete(ctx, slice)).To(gomega.Succeed())
-			}()
+			util.MustCreate(ctx, k8sClient, slice)
+			resourceSlices = append(resourceSlices, slice)
 
 			ginkgo.By("Creating a ResourceClaimTemplate with CEL selector that matches no devices")
 			rct := utiltesting.MakeResourceClaimTemplate("cel-reject-template", ns.Name).
 				DeviceRequest("device-request", "foo.example.com", 2).
 				WithCELSelectors("device.driver == \"nonexistent-driver\"").
 				Obj()
-			gomega.Expect(k8sClient.Create(ctx, rct)).To(gomega.Succeed())
+			util.MustCreate(ctx, k8sClient, rct)
 
 			ginkgo.By("Creating a workload with unsatisfiable CEL selectors")
 			wl := utiltestingapi.MakeWorkload("test-wl-cel-reject", ns.Name).
 				Queue("test-lq").
+				PodSets(
+					*utiltestingapi.MakePodSet(kueue.DefaultPodSetName, 1).
+						ResourceClaimTemplate("device-template", "cel-reject-template").
+						Obj(),
+				).
 				Obj()
-			wl.Spec.PodSets[0].Template.Spec.ResourceClaims = []corev1.PodResourceClaim{
-				{
-					Name:                      "device-template",
-					ResourceClaimTemplateName: new("cel-reject-template"),
-				},
-			}
-			wl.Spec.PodSets[0].Template.Spec.Containers[0].Resources.Claims = []corev1.ResourceClaim{
-				{Name: "device-template"},
-			}
-			gomega.Expect(k8sClient.Create(ctx, wl)).To(gomega.Succeed())
+			util.MustCreate(ctx, k8sClient, wl)
 
 			ginkgo.By("Verifying workload is marked as inadmissible due to unsatisfiable CEL selectors")
 			gomega.Eventually(func(g gomega.Gomega) {
