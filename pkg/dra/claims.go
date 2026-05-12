@@ -25,6 +25,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	resourcev1 "k8s.io/api/resource/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	dracel "k8s.io/dynamic-resource-allocation/cel"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -72,29 +73,32 @@ func countDevicesPerClass(claimSpec *resourcev1.ResourceClaimSpec) (resources.Re
 		return nil, allErrs
 	}
 
+	devicesRequestsPath := field.NewPath("devices", "requests")
+
 	for i, req := range claimSpec.Devices.Requests {
 		// v1 DeviceRequest has Exactly or FirstAvailable. For Step 1, we
 		// preserve existing semantics by only supporting Exactly with Count.
 		var dcName string
 		var q int64
 		if req.FirstAvailable != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("devices", "requests").Index(i), nil, "FirstAvailable device selection is not supported"))
+			allErrs = append(allErrs, field.Invalid(devicesRequestsPath.Index(i), nil, "FirstAvailable device selection is not supported"))
 			return nil, allErrs
 		}
 
-		if err := validateCELSelectors(req.Exactly.Selectors, field.NewPath("devices", "requests").Index(i).Child("exactly", "selectors")); err != nil {
-			allErrs = append(allErrs, field.Invalid(field.NewPath("devices", "requests").Index(i).Child("exactly", "selectors"), nil, err.Error()))
+		selectorsPath := devicesRequestsPath.Index(i).Child("exactly", "selectors")
+		if err := validateCELSelectors(req.Exactly.Selectors, selectorsPath); err != nil {
+			allErrs = append(allErrs, field.Invalid(selectorsPath, nil, err.Error()))
 			return nil, allErrs
 		}
 
 		switch {
 		case req.Exactly.AdminAccess != nil && *req.Exactly.AdminAccess:
-			allErrs = append(allErrs, field.Invalid(field.NewPath("devices", "requests").Index(i).Child("exactly", "adminAccess"), nil, "AdminAccess is not supported"))
+			allErrs = append(allErrs, field.Invalid(devicesRequestsPath.Index(i).Child("exactly", "adminAccess"), nil, "AdminAccess is not supported"))
 			return nil, allErrs
 		case req.Exactly.AllocationMode == resourcev1.DeviceAllocationModeAll:
 			allErrs = append(
 				allErrs,
-				field.Invalid(field.NewPath("devices", "requests").Index(i).Child("exactly", "allocationMode"), resourcev1.DeviceAllocationModeAll, "AllocationMode 'All' is not supported"),
+				field.Invalid(devicesRequestsPath.Index(i).Child("exactly", "allocationMode"), resourcev1.DeviceAllocationModeAll, "AllocationMode 'All' is not supported"),
 			)
 			return nil, allErrs
 		case req.Exactly.AllocationMode == resourcev1.DeviceAllocationModeExactCount:
@@ -104,7 +108,7 @@ func countDevicesPerClass(claimSpec *resourcev1.ResourceClaimSpec) (resources.Re
 			allErrs = append(
 				allErrs,
 				field.Invalid(
-					field.NewPath("devices", "requests").Index(i).Child("exactly", "allocationMode"),
+					devicesRequestsPath.Index(i).Child("exactly", "allocationMode"),
 					req.Exactly.AllocationMode,
 					fmt.Sprintf("unsupported allocation mode: %s", req.Exactly.AllocationMode),
 				),
@@ -357,13 +361,13 @@ func resolveAndCompileDeviceClass(
 }
 
 // countMatchingDevices evaluates devices against class and request selectors,
-// marking consumed devices and returning the match count.
-// Devices already in the consumed map are skipped to prevent double-counting.
-func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSelectors, requestSelectors []dracel.CompilationResult, consumed map[int]bool, needed int64) (int64, error) {
+// marking matchedDevices devices and returning the match count.
+// Devices already in the matchedDevices map are skipped to prevent double-counting.
+func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSelectors, requestSelectors []dracel.CompilationResult, matchedDevices sets.Set[int], needed int64) (int64, error) {
 	var matchCount int64
 
 	for devIdx, dev := range devices {
-		if consumed[devIdx] {
+		if matchedDevices.Has(devIdx) {
 			continue
 		}
 
@@ -381,7 +385,7 @@ func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSel
 		}
 
 		if allMatch {
-			consumed[devIdx] = true
+			matchedDevices.Insert(devIdx)
 			matchCount++
 			if matchCount >= needed {
 				break
@@ -399,7 +403,7 @@ func countMatchingDevices(ctx context.Context, devices []dracel.Device, classSel
 // CEL selectors. This avoids running CEL against devices that belong to
 // unrelated drivers or classes.
 // If fewer devices match than requested, it returns field errors indicating the
-// workload is unsatisfiable, preventing quota from being consumed by workloads
+// workload is unsatisfiable, preventing quota from being matchedDevices by workloads
 // whose pods can never be scheduled.
 func validateCELSelectorsAgainstDevices(ctx context.Context, cl client.Client, claimSpec *resourcev1.ResourceClaimSpec, basePath *field.Path) field.ErrorList {
 	celReqs := extractCELRequests(claimSpec)
@@ -414,7 +418,7 @@ func validateCELSelectorsAgainstDevices(ctx context.Context, cl client.Client, c
 
 	clusterDevices := buildDeviceListFromSlices(sliceList.Items)
 	classCache := make(map[string]*resourcev1.DeviceClass)
-	consumed := make(map[int]bool)
+	matchedDevices := sets.New[int]()
 
 	var allErrs field.ErrorList
 
@@ -438,7 +442,7 @@ func validateCELSelectorsAgainstDevices(ctx context.Context, cl client.Client, c
 			continue
 		}
 
-		matchCount, evalErr := countMatchingDevices(ctx, clusterDevices, classSelectors, compiled, consumed, cr.count)
+		matchCount, evalErr := countMatchingDevices(ctx, clusterDevices, classSelectors, compiled, matchedDevices, cr.count)
 
 		if evalErr != nil {
 			ctrl.LoggerFrom(ctx).V(3).Info("CEL evaluation error encountered while matching devices",
