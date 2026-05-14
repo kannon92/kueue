@@ -1,4 +1,4 @@
-title: LocalQueue Default Maximum Execution Time
+title: ClusterQueue Default Maximum Execution Time
 kep-number: 7029
 authors:
   - "@kannon92"
