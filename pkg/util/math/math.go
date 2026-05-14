@@ -49,3 +49,27 @@ func SafeMilliValue(q resource.Quantity) int64 {
 	}
 	return q.MilliValue()
 }
+
+// SaturatingMul multiplies two int64s, returning math.MaxInt64 or math.MinInt64 if the
+// result would overflow or underflow.
+func SaturatingMul(a, b int64) int64 {
+	if a == 0 || b == 0 {
+		return 0
+	}
+	// Explicitly catch the MinInt64 * -1 edge case.
+	// In two's complement, the absolute value of MinInt64 is 1 greater than MaxInt64.
+	// If we multiply it by -1, it overflows to MinInt64. Go safely handles MinInt64 / -1
+	// by evaluating it back to MinInt64. Because of this, our division check
+	// (res/b != a) evaluates to false and fails to detect the overflow.
+	if (a == -1 && b == stdmath.MinInt64) || (b == -1 && a == stdmath.MinInt64) {
+		return stdmath.MaxInt64
+	}
+	res := a * b
+	if res/b != a {
+		if (a < 0) == (b < 0) {
+			return stdmath.MaxInt64
+		}
+		return stdmath.MinInt64
+	}
+	return res
+}
