@@ -80,6 +80,7 @@ reviews:
         project. Prefer table-driven tests for multiple scenarios.
 
   auto_review:
+    base_branches: ['.*']
     enabled: true
     ignore_title_keywords:
       - "WIP"
