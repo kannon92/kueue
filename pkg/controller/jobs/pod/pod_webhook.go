@@ -178,8 +178,8 @@ func (w *PodWebhook) Default(ctx context.Context, obj *corev1.Pod) error {
 		}
 
 		if shouldDefaultNativePodGroup(w.nativePodGroupsEnabled, &pod.pod) {
-			setNativePodGroupName(&pod.pod, GetPodGroupName(&pod.pod))
-			log.V(4).Info("Defaulted schedulingGroup.podGroupName for Pod group", "pod", client.ObjectKeyFromObject(&pod.pod), "podGroupName", GetPodGroupName(&pod.pod))
+			setNativePodGroupName(&pod.pod, utilpod.GetPodGroupName(&pod.pod))
+			log.V(4).Info("Defaulted schedulingGroup.podGroupName for Pod group", "pod", client.ObjectKeyFromObject(&pod.pod), "podGroupName", utilpod.GetPodGroupName(&pod.pod))
 		}
 
 		gate(&pod.pod)
