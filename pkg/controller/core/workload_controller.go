@@ -106,6 +106,7 @@ var (
 		kueue.WorkloadQuotaReservedReasonWaitingForPodsReady,
 		kueue.WorkloadQuotaReservedReasonPendingEvaluation,
 		kueue.PreemptionGated,
+		kueue.WorkloadMaximumExecutionTimeExceeded,
 	)
 )
 

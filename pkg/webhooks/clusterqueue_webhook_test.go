@@ -813,3 +813,67 @@ func TestValidateFlavorResourceCombinations(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateClusterQueueWorkloadDefaultsGate(t *testing.T) {
+	withDefaults := func(v int32) *kueue.ClusterQueue {
+		return utiltestingapi.MakeClusterQueue("cluster-queue").MaximumExecutionTimeSeconds(v).Obj()
+	}
+	withoutDefaults := utiltestingapi.MakeClusterQueue("cluster-queue").Obj()
+	wantForbidden := field.ErrorList{field.Forbidden(field.NewPath("spec", "workloadDefaults"), "")}
+
+	testcases := map[string]struct {
+		gateEnabled bool
+		oldCQ       *kueue.ClusterQueue
+		newCQ       *kueue.ClusterQueue
+		wantErr     field.ErrorList
+	}{
+		"create with defaults, gate enabled": {
+			gateEnabled: true,
+			newCQ:       withDefaults(60),
+		},
+		"create with defaults, gate disabled": {
+			newCQ:   withDefaults(60),
+			wantErr: wantForbidden,
+		},
+		"create without defaults, gate disabled": {
+			newCQ: withoutDefaults,
+		},
+		"update setting defaults, gate disabled": {
+			oldCQ:   withoutDefaults,
+			newCQ:   withDefaults(60),
+			wantErr: wantForbidden,
+		},
+		"update changing defaults, gate disabled": {
+			oldCQ:   withDefaults(60),
+			newCQ:   withDefaults(120),
+			wantErr: wantForbidden,
+		},
+		"update leaving defaults unchanged, gate disabled": {
+			oldCQ: withDefaults(60),
+			newCQ: withDefaults(60),
+		},
+		"update removing defaults, gate disabled": {
+			oldCQ: withDefaults(60),
+			newCQ: withoutDefaults,
+		},
+		"update changing defaults, gate enabled": {
+			gateEnabled: true,
+			oldCQ:       withDefaults(60),
+			newCQ:       withDefaults(120),
+		},
+	}
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			features.SetFeatureGateDuringTest(t, features.ClusterQueueMaxExecutionTime, tc.gateEnabled)
+			var gotErr field.ErrorList
+			if tc.oldCQ == nil {
+				gotErr = validateWorkloadDefaultsGate(tc.newCQ.Spec.WorkloadDefaults)
+			} else {
+				gotErr = ValidateClusterQueueUpdate(tc.oldCQ, tc.newCQ)
+			}
+			if diff := cmp.Diff(tc.wantErr, gotErr, cmpopts.IgnoreFields(field.Error{}, "Detail", "BadValue")); diff != "" {
+				t.Errorf("unexpected errors (-want,+got):\n%s", diff)
+			}
+		})
+	}
+}

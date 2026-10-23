@@ -1049,6 +1049,15 @@ number of Workloads that the scheduler and controllers process.
 This field is immutable.</p>
 </td>
 </tr>
+<tr><td><code>workloadDefaults</code><br/>
+<a href="#kueue-x-k8s-io-v1beta2-ClusterQueueWorkloadDefaults"><code>ClusterQueueWorkloadDefaults</code></a>
+</td>
+<td>
+   <p>workloadDefaults defines default values that are applied to workloads
+submitted to LocalQueues backed by this ClusterQueue when the workload
+does not already specify them.</p>
+</td>
+</tr>
 </tbody>
 </table>
 
@@ -1136,6 +1145,42 @@ present. It is set by Dynamic Quota Orchestration (DQO), which overrides
 the quotas of whole flavors.</p>
 <p>This field is alpha-level, and is ignored by Kueue when the DynamicQuotaOrchestration
 feature gate is disabled.</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+## `ClusterQueueWorkloadDefaults`     {#kueue-x-k8s-io-v1beta2-ClusterQueueWorkloadDefaults}
+    
+
+**Appears in:**
+
+- [ClusterQueueSpec](#kueue-x-k8s-io-v1beta2-ClusterQueueSpec)
+
+
+<p>ClusterQueueWorkloadDefaults defines default values that are applied to
+workloads submitted to LocalQueues backed by this ClusterQueue when the
+workload does not already specify them.</p>
+
+
+<table class="table">
+<thead><tr><th width="30%">Field</th><th>Description</th></tr></thead>
+<tbody>
+    
+  
+<tr><td><code>maximumExecutionTimeSeconds</code><br/>
+<code>int32</code>
+</td>
+<td>
+   <p>maximumExecutionTimeSeconds is the maximum execution time, in seconds, for
+workloads submitted to LocalQueues backed by this ClusterQueue.
+It is the default for workloads without the
+kueue.x-k8s.io/max-exec-time-seconds label, and the upper bound for
+workloads with it: a workload whose label value is larger is not admitted
+and stays pending with the MaximumExecutionTimeExceeded reason.
+When unset, the ClusterQueue sets no default and no limit.
+Changing the value does not affect existing workloads.</p>
+<p>This is an alpha field and requires enabling the ClusterQueueMaxExecutionTime feature gate.</p>
 </td>
 </tr>
 </tbody>

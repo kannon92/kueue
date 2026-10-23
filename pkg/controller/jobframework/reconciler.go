@@ -1741,9 +1741,14 @@ func EquivalentToWorkload(ctx context.Context, c client.Client, job GenericJob, 
 		return false, nil
 	}
 
+	// Only compare MaximumExecutionTimeSeconds when the job explicitly has the
+	// max-exec-time-seconds label. If the label is absent, the workload's value
+	// may have been inherited from the ClusterQueue, and no mismatch should be reported.
 	defaultDuration := int32(-1)
-	if ptr.Deref(wl.Spec.MaximumExecutionTimeSeconds, defaultDuration) != ptr.Deref(MaximumExecutionTimeSeconds(job), defaultDuration) {
-		return false, nil
+	if jobMaxExecTime := MaximumExecutionTimeSeconds(job); jobMaxExecTime != nil {
+		if ptr.Deref(wl.Spec.MaximumExecutionTimeSeconds, defaultDuration) != *jobMaxExecTime {
+			return false, nil
+		}
 	}
 
 	getPodSets, err := JobPodSets(ctx, job, c)
@@ -1786,6 +1791,7 @@ func (r *JobReconciler) updateWorkloadToMatchJob(ctx context.Context, job Generi
 	if err != nil {
 		return nil, fmt.Errorf("can't construct workload for update: %w", err)
 	}
+	ApplyClusterQueueDefaultsToWorkload(ctx, r.client, newWl)
 	wl.Spec = newWl.Spec
 	if err = r.client.Update(ctx, wl); err != nil {
 		return nil, fmt.Errorf("updating existed workload: %w", err)
@@ -2292,6 +2298,7 @@ func (r *JobReconciler) handleJobWithNoWorkload(ctx context.Context, job Generic
 	if err != nil {
 		return err
 	}
+	ApplyClusterQueueDefaultsToWorkload(ctx, r.client, wl)
 	if err = r.client.Create(ctx, wl); err != nil {
 		return err
 	}

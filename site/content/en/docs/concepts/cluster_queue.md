@@ -553,6 +553,44 @@ AdmissionChecks are a mechanism that allows Kueue to consider additional criteri
 
 For an example ClusterQueue configuration using admission checks, see [Admission Checks](/docs/concepts/admission_check#usage).
 
+## Workload defaults
+
+{{< feature-state state="alpha" for_version="v0.21" >}}
+
+{{% alert title="Note" color="primary" %}}
+`workloadDefaults` is an alpha feature and is disabled by default.
+
+You can enable it by editing the `ClusterQueueMaxExecutionTime` feature gate. Refer to the
+[Installation guide](/docs/installation/#change-the-feature-gates-configuration)
+for instructions on how to enable feature gates.
+{{% /alert %}}
+
+You can set a maximum execution time for all workloads submitted to LocalQueues backed by a ClusterQueue:
+
+```yaml
+apiVersion: kueue.x-k8s.io/v1beta2
+kind: ClusterQueue
+metadata:
+  name: cluster-queue
+spec:
+  workloadDefaults:
+    maximumExecutionTimeSeconds: 3600
+```
+
+The value is both a default and an upper bound for the
+[`maximumExecutionTimeSeconds`](/docs/concepts/workload/#maximum-execution-time) of a Workload:
+
+| `kueue.x-k8s.io/max-exec-time-seconds` label | Result |
+|---|---|
+| unset | The Workload gets the ClusterQueue value. |
+| set, at most the ClusterQueue value | The Workload gets the label value. |
+| set, above the ClusterQueue value | The Workload is not admitted and stays pending, with `QuotaReserved=False` and the reason `MaximumExecutionTimeExceeded`. Lower the label value to recover. |
+
+If `workloadDefaults.maximumExecutionTimeSeconds` is unset, the ClusterQueue sets no default and no limit.
+
+The default is applied when the Workload is created. Changing the ClusterQueue value, or moving a job to
+another LocalQueue, does not update existing Workloads.
+
 ## What's next?
 
 - Create [local queues](/docs/concepts/local_queue)

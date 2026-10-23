@@ -111,6 +111,8 @@ type clusterQueue struct {
 
 	DynamicQuotaOrchestrator kueuealpha.DynamicQuotaOrchestratorReference
 
+	WorkloadDefaults *kueue.ClusterQueueWorkloadDefaults
+
 	roleTracker *roletracker.RoleTracker
 
 	// allows access to values extracted from K8s labels/annotations, used as custom Prometheus metric labels
@@ -227,6 +229,9 @@ func (c *clusterQueue) updateClusterQueue(
 		c.ConcurrentAdmissionPolicy = in.Spec.ConcurrentAdmissionPolicy
 	}
 	c.DynamicQuotaOrchestrator = dqo.EffectiveOrchestrator(in.Status.EffectiveQuotas)
+	if features.Enabled(features.ClusterQueueMaxExecutionTime) {
+		c.WorkloadDefaults = in.Spec.WorkloadDefaults
+	}
 	return nil
 }
 

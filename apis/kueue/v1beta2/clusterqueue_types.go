@@ -173,6 +173,32 @@ type ClusterQueueSpec struct {
 	//
 	// +optional
 	ConcurrentAdmissionPolicy *ConcurrentAdmissionPolicy `json:"concurrentAdmissionPolicy,omitempty"`
+
+	// workloadDefaults defines default values that are applied to workloads
+	// submitted to LocalQueues backed by this ClusterQueue when the workload
+	// does not already specify them.
+	// +optional
+	WorkloadDefaults *ClusterQueueWorkloadDefaults `json:"workloadDefaults,omitempty"`
+}
+
+// ClusterQueueWorkloadDefaults defines default values that are applied to
+// workloads submitted to LocalQueues backed by this ClusterQueue when the
+// workload does not already specify them.
+type ClusterQueueWorkloadDefaults struct {
+	// maximumExecutionTimeSeconds is the maximum execution time, in seconds, for
+	// workloads submitted to LocalQueues backed by this ClusterQueue.
+	// It is the default for workloads without the
+	// kueue.x-k8s.io/max-exec-time-seconds label, and the upper bound for
+	// workloads with it: a workload whose label value is larger is not admitted
+	// and stays pending with the MaximumExecutionTimeExceeded reason.
+	// When unset, the ClusterQueue sets no default and no limit.
+	// Changing the value does not affect existing workloads.
+	//
+	// This is an alpha field and requires enabling the ClusterQueueMaxExecutionTime feature gate.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	MaximumExecutionTimeSeconds *int32 `json:"maximumExecutionTimeSeconds,omitempty"`
 }
 
 // AdmissionChecksStrategy defines a strategy for a AdmissionCheck.

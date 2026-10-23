@@ -19,6 +19,7 @@ package webhooks
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/equality"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -96,18 +97,32 @@ func (w *ClusterQueueWebhook) ValidateDelete(_ context.Context, _ *kueue.Cluster
 func ValidateClusterQueue(cq *kueue.ClusterQueue) field.ErrorList {
 	allErrs := validateClusterQueueSpec(cq)
 	allErrs = append(allErrs, validateAdmissionCheckOnFlavors(cq)...)
+	allErrs = append(allErrs, validateWorkloadDefaultsGate(cq.Spec.WorkloadDefaults)...)
 	return allErrs
 }
 
 func ValidateClusterQueueUpdate(oldCQ, newCQ *kueue.ClusterQueue) field.ErrorList {
 	allErrs := validateClusterQueueSpec(newCQ)
 	allErrs = append(allErrs, validateAdmissionCheckOnFlavorsUpdate(oldCQ, newCQ)...)
+	// Only a change is rejected, so that disabling the gate does not block
+	// unrelated updates of ClusterQueues that already set workloadDefaults.
+	if !equality.Semantic.DeepEqual(oldCQ.Spec.WorkloadDefaults, newCQ.Spec.WorkloadDefaults) {
+		allErrs = append(allErrs, validateWorkloadDefaultsGate(newCQ.Spec.WorkloadDefaults)...)
+	}
 	allErrs = append(allErrs, apimachineryvalidation.ValidateImmutableField(
 		newCQ.Spec.ConcurrentAdmissionPolicy,
 		oldCQ.Spec.ConcurrentAdmissionPolicy,
 		field.NewPath("spec", "concurrentAdmissionPolicy"),
 	)...)
 	return allErrs
+}
+
+func validateWorkloadDefaultsGate(defaults *kueue.ClusterQueueWorkloadDefaults) field.ErrorList {
+	if defaults == nil || features.Enabled(features.ClusterQueueMaxExecutionTime) {
+		return nil
+	}
+	return field.ErrorList{field.Forbidden(field.NewPath("spec", "workloadDefaults"),
+		"can be set only when the ClusterQueueMaxExecutionTime feature gate is enabled")}
 }
 
 func validateClusterQueueSpec(cq *kueue.ClusterQueue) field.ErrorList {

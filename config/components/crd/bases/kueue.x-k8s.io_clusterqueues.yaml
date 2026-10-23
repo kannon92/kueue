@@ -586,6 +586,28 @@ spec:
                 - Hold
                 - HoldAndDrain
                 type: string
+              workloadDefaults:
+                description: |-
+                  workloadDefaults defines default values that are applied to workloads
+                  submitted to LocalQueues backed by this ClusterQueue when the workload
+                  does not already specify them.
+                properties:
+                  maximumExecutionTimeSeconds:
+                    description: |-
+                      maximumExecutionTimeSeconds is the maximum execution time, in seconds, for
+                      workloads submitted to LocalQueues backed by this ClusterQueue.
+                      It is the default for workloads without the
+                      kueue.x-k8s.io/max-exec-time-seconds label, and the upper bound for
+                      workloads with it: a workload whose label value is larger is not admitted
+                      and stays pending with the MaximumExecutionTimeExceeded reason.
+                      When unset, the ClusterQueue sets no default and no limit.
+                      Changing the value does not affect existing workloads.
+
+                      This is an alpha field and requires enabling the ClusterQueueMaxExecutionTime feature gate.
+                    format: int32
+                    minimum: 1
+                    type: integer
+                type: object
             type: object
             x-kubernetes-validations:
             - message: borrowingLimit must be nil when cohort is empty

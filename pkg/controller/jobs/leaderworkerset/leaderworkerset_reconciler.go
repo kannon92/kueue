@@ -337,6 +337,8 @@ func (r *Reconciler) createWorkload(ctx context.Context, lws *leaderworkersetv1.
 		return err
 	}
 
+	jobframework.ApplyClusterQueueDefaultsToWorkload(ctx, r.client, createdWorkload)
+
 	err = r.client.Create(ctx, createdWorkload)
 	if err != nil {
 		log.Error(err, "Failed to create Workload")
